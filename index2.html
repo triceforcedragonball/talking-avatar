@@ -25,28 +25,28 @@
   /* Animation Keyframes */
   @keyframes regularBounceAnim {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--regular-bounce-height, -10px)); }
+    50% { transform: translateY(var(--anim-intensity, -10px)); }
   }
   @keyframes excitedBounceAnim {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--excited-bounce-height, -30px)); }
+    50% { transform: translateY(var(--anim-intensity, -30px)); }
   }
   @keyframes swayAnim {
     0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(var(--sway-angle, -5deg)); }
-    75% { transform: rotate(var(--sway-angle, 5deg)); }
+    25% { transform: rotate(calc(var(--anim-intensity, 6deg) * -1)); }
+    75% { transform: rotate(var(--anim-intensity, 6deg)); }
   }
   @keyframes tiltAnim {
     0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(var(--tilt-angle, 10deg)); }
+    50% { transform: rotate(var(--anim-intensity, 8deg)); }
   }
   @keyframes pulseAnim {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(var(--pulse-scale, 1.1)); }
+    50% { transform: scale(var(--anim-intensity, 1.08)); }
   }
   @keyframes floatAnim {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--float-distance, -15px)); }
+    50% { transform: translateY(calc(var(--anim-intensity, 15px) * -1)); }
   }
 
   .anim-regular-bounce { animation: regularBounceAnim 0.8s ease-in-out infinite; }
@@ -67,13 +67,14 @@
   .hidden-mode .stage{min-height:90vh;max-height:98vh;margin:0;border-radius:10px}
   .hidden-mode #floatingToggle{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;z-index:10;cursor:pointer}
 
-  button,input{font:inherit}
+  button,input,select{font:inherit}
   .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0}
   button{border:0;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;font-size:13px}
   .primary{background:#fff;color:#111}
   .dark{background:#333;color:#fff}
   .danger{background:#5a2323;color:#ff9999}
-  .active-btn{background:#63df83 !important;color:#111 !important}
+  
+  select{width:100%;padding:10px;border-radius:10px;background:#222;color:#fff;border:1px solid #444;font-weight:700;font-size:13px}
   
   .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
   .slot-card{background:#1e1e1e;padding:8px;border-radius:10px;border:1px solid #333;text-align:left}
@@ -122,39 +123,22 @@
     <label class="range-label">Blink Frequency (Speed/Rate)</label>
     <input id="blinkSpeed" type="range" min="1" max="100" value="50">
 
-    <!-- Actions & Animations Section -->
+    <!-- Single Action Menu & Intensity Slider Section -->
     <div class="actions-section">
-      <p style="margin:0 0 6px 0;font-size:12px;color:#888;font-weight:bold;text-align:left">AVATAR ACTIONS & ANIMATIONS</p>
+      <p style="margin:0 0 6px 0;font-size:12px;color:#888;font-weight:bold;text-align:left">AVATAR ACTION SELECTOR</p>
       
-      <!-- Regular Bounce -->
-      <div class="row"><button class="dark" id="regularBounceBtn" style="flex:1">🟢 Regular Bounce: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Regular Bounce Height</label>
-      <input id="regularBounceIntensity" type="range" min="2" max="25" value="10">
+      <select id="actionSelect">
+        <option value="none">✨ No Active Action</option>
+        <option value="anim-regular-bounce">🟢 Regular Bounce</option>
+        <option value="anim-excited-bounce">🎉 Excited Bounce</option>
+        <option value="anim-sway">🔄 Side Sway</option>
+        <option value="anim-tilt">📐 Head Tilt</option>
+        <option value="anim-pulse">💓 Pulse Zoom</option>
+        <option value="anim-float">🎈 Floating Hover</option>
+      </select>
 
-      <!-- Excited Bounce -->
-      <div class="row" style="margin-top:6px"><button class="dark" id="excitedBounceBtn" style="flex:1">🎉 Excited Bounce: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Excited Bounce Height</label>
-      <input id="excitedBounceIntensity" type="range" min="15" max="50" value="30">
-
-      <!-- Action 1: Sway -->
-      <div class="row" style="margin-top:6px"><button class="dark" id="swayBtn" style="flex:1">🔄 Side Sway: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Sway Angle Range</label>
-      <input id="swayIntensity" type="range" min="2" max="15" value="6">
-
-      <!-- Action 2: Head Tilt -->
-      <div class="row" style="margin-top:6px"><button class="dark" id="tiltBtn" style="flex:1">📐 Head Tilt: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Tilt Angle Range</label>
-      <input id="tiltIntensity" type="range" min="3" max="20" value="8">
-
-      <!-- Action 3: Pulse Zoom -->
-      <div class="row" style="margin-top:6px"><button class="dark" id="pulseBtn" style="flex:1">💓 Pulse Zoom: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Pulse Zoom Scale</label>
-      <input id="pulseIntensity" type="range" min="102" max="125" value="108">
-
-      <!-- Action 4: Floating Hover -->
-      <div class="row" style="margin-top:6px"><button class="dark" id="floatBtn" style="flex:1">🎈 Floating Hover: OFF</button></div>
-      <label class="range-label" style="font-size:11px">Hover Distance</label>
-      <input id="floatIntensity" type="range" min="5" max="35" value="15">
+      <label class="range-label" id="intensityLabel">Action Intensity</label>
+      <input id="actionIntensity" type="range" min="2" max="50" value="10">
     </div>
 
     <div class="slots-grid">
@@ -225,16 +209,7 @@ let isTalking = false;
 let isBlinking = false;
 let blinkTimeout = null;
 let blinkMultiplier = 1.0;
-
-// Action toggles
-let activeActions = {
-  regularBounce: false,
-  excitedBounce: false,
-  sway: false,
-  tilt: false,
-  pulse: false,
-  float: false
-};
+let currentActiveAction = 'none';
 
 // DOM Elements
 const avatar=document.getElementById('avatar');
@@ -249,20 +224,10 @@ const appMain=document.getElementById('appMain');
 const modeToggleBtn=document.getElementById('modeToggleBtn');
 const floatingToggle=document.getElementById('floatingToggle');
 
-// Action Buttons & Sliders
-const regularBounceBtn = document.getElementById('regularBounceBtn');
-const excitedBounceBtn = document.getElementById('excitedBounceBtn');
-const swayBtn = document.getElementById('swayBtn');
-const tiltBtn = document.getElementById('tiltBtn');
-const pulseBtn = document.getElementById('pulseBtn');
-const floatBtn = document.getElementById('floatBtn');
-
-const regularBounceIntensity = document.getElementById('regularBounceIntensity');
-const excitedBounceIntensity = document.getElementById('excitedBounceIntensity');
-const swayIntensity = document.getElementById('swayIntensity');
-const tiltIntensity = document.getElementById('tiltIntensity');
-const pulseIntensity = document.getElementById('pulseIntensity');
-const floatIntensity = document.getElementById('floatIntensity');
+// Dropdown & Intensity Controls
+const actionSelect = document.getElementById('actionSelect');
+const actionIntensity = document.getElementById('actionIntensity');
+const intensityLabel = document.getElementById('intensityLabel');
 
 // --- IndexedDB Persistence Implementation ---
 const DB_NAME = 'TalkingAvatarDB';
@@ -431,34 +396,56 @@ function scheduleBlink() {
   }, currentInterval);
 }
 
-// --- Action Toggle Handlers ---
-function toggleAction(actionName, btnElement, animClassName) {
-  activeActions[actionName] = !activeActions[actionName];
-  if (activeActions[actionName]) {
-    avatarContainer.classList.add(animClassName);
-    btnElement.textContent = btnElement.textContent.replace('OFF', 'ON');
-    btnElement.classList.add('active-btn');
-  } else {
-    avatarContainer.classList.remove(animClassName);
-    btnElement.textContent = btnElement.textContent.replace('ON', 'OFF');
-    btnElement.classList.remove('active-btn');
+// --- Action Dropdown & Dynamic Slider Configuration ---
+function applyActionSettings(actionValue, sliderVal) {
+  // Remove all current animation classes
+  const animClasses = ['anim-regular-bounce', 'anim-excited-bounce', 'anim-sway', 'anim-tilt', 'anim-pulse', 'anim-float'];
+  avatarContainer.classList.remove(...animClasses);
+
+  if (actionValue === 'none') return;
+
+  // Add the chosen animation class
+  avatarContainer.classList.add(actionValue);
+
+  // Configure intensity limits and CSS variables dynamically based on action type
+  if (actionValue === 'anim-regular-bounce') {
+    intensityLabel.textContent = 'Regular Bounce Height';
+    avatarContainer.style.setProperty('--anim-intensity', `-${sliderVal}px`);
+  } else if (actionValue === 'anim-excited-bounce') {
+    intensityLabel.textContent = 'Excited Bounce Height';
+    avatarContainer.style.setProperty('--anim-intensity', `-${sliderVal}px`);
+  } else if (actionValue === 'anim-sway') {
+    intensityLabel.textContent = 'Side Sway Angle';
+    avatarContainer.style.setProperty('--anim-intensity', `${sliderVal}deg`);
+  } else if (actionValue === 'anim-tilt') {
+    intensityLabel.textContent = 'Head Tilt Angle';
+    avatarContainer.style.setProperty('--anim-intensity', `${sliderVal}deg`);
+  } else if (actionValue === 'anim-pulse') {
+    intensityLabel.textContent = 'Pulse Zoom Scale';
+    avatarContainer.style.setProperty('--anim-intensity', `${sliderVal / 100}`);
+  } else if (actionValue === 'anim-float') {
+    intensityLabel.textContent = 'Hover Distance';
+    avatarContainer.style.setProperty('--anim-intensity', `${sliderVal}px`);
   }
 }
 
-regularBounceBtn.onclick = () => toggleAction('regularBounce', regularBounceBtn, 'anim-regular-bounce');
-excitedBounceBtn.onclick = () => toggleAction('excitedBounce', excitedBounceBtn, 'anim-excited-bounce');
-swayBtn.onclick = () => toggleAction('sway', swayBtn, 'anim-sway');
-tiltBtn.onclick = () => toggleAction('tilt', tiltBtn, 'anim-tilt');
-pulseBtn.onclick = () => toggleAction('pulse', pulseBtn, 'anim-pulse');
-floatBtn.onclick = () => toggleAction('float', floatBtn, 'anim-float');
+actionSelect.onchange = e => {
+  currentActiveAction = e.target.value;
+  
+  // Set sensible default slider values when switching actions
+  if (currentActiveAction === 'anim-regular-bounce') { actionIntensity.min = 2; actionIntensity.max = 25; actionIntensity.value = 10; }
+  else if (currentActiveAction === 'anim-excited-bounce') { actionIntensity.min = 15; actionIntensity.max = 50; actionIntensity.value = 30; }
+  else if (currentActiveAction === 'anim-sway') { actionIntensity.min = 2; actionIntensity.max = 15; actionIntensity.value = 6; }
+  else if (currentActiveAction === 'anim-tilt') { actionIntensity.min = 3; actionIntensity.max = 20; actionIntensity.value = 8; }
+  else if (currentActiveAction === 'anim-pulse') { actionIntensity.min = 102; actionIntensity.max = 125; actionIntensity.value = 108; }
+  else if (currentActiveAction === 'anim-float') { actionIntensity.min = 5; actionIntensity.max = 35; actionIntensity.value = 15; }
 
-// Intensity Sliders Listeners
-regularBounceIntensity.oninput = e => avatarContainer.style.setProperty('--regular-bounce-height', `-${e.target.value}px`);
-excitedBounceIntensity.oninput = e => avatarContainer.style.setProperty('--excited-bounce-height', `-${e.target.value}px`);
-swayIntensity.oninput = e => avatarContainer.style.setProperty('--sway-angle', `${e.target.value}deg`);
-tiltIntensity.oninput = e => avatarContainer.style.setProperty('--tilt-angle', `${e.target.value}deg`);
-pulseIntensity.oninput = e => avatarContainer.style.setProperty('--pulse-scale', `${e.target.value / 100}`);
-floatIntensity.oninput = e => avatarContainer.style.setProperty('--float-distance', `-${e.target.value}px`);
+  applyActionSettings(currentActiveAction, Number(actionIntensity.value));
+};
+
+actionIntensity.oninput = e => {
+  applyActionSettings(currentActiveAction, Number(e.target.value));
+};
 
 // --- UI Layout Modes (Avatar-Only vs Setup Mode) ---
 function toggleAvatarMode(enabled) {
@@ -566,13 +553,8 @@ start.onclick = () => running ? stopMic() : startMic();
 
 window.addEventListener('DOMContentLoaded', () => {
   loadAllImagesFromDB();
-  // Set default animation variables
-  avatarContainer.style.setProperty('--regular-bounce-height', '-10px');
-  avatarContainer.style.setProperty('--excited-bounce-height', '-30px');
-  avatarContainer.style.setProperty('--sway-angle', '6deg');
-  avatarContainer.style.setProperty('--tilt-angle', '8deg');
-  avatarContainer.style.setProperty('--pulse-scale', '1.08');
-  avatarContainer.style.setProperty('--float-distance', '-15px');
+  // Initialize default active action settings
+  applyActionSettings(currentActiveAction, Number(actionIntensity.value));
 });
 </script>
 </body>
