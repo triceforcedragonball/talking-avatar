@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Talking Avatar</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;min-height:100vh}
+  main{max-width:520px;width:100%;margin:auto;padding:12px 14px 24px;display:flex;flex-direction:column;flex:1}
+  h1{margin:4px 0 2px;font-size:22px}
+  p.subtitle{color:#bbb;margin:0 0 10px;font-size:14px}
+  
+  /* Stage area scales gracefully */
+  .stage{flex:1;min-height:260px;max-height:70vh;background:#252525;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0;position:relative}
+  #avatar{max-width:100%;max-height:100%;object-fit:contain}
+  #placeholder{color:#777;padding:20px;font-size:14px}
+
+  /* Mode toggle bar */
+  .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  
+  /* Collapsible settings panel for Avatar-only mode */
+  #controlsPanel{transition:all 0.3s ease}
+  .hidden-mode #controlsPanel{display:none}
+  .hidden-mode main{max-width:100%;padding:4px;height:100vh;justify-content:center}
+  .hidden-mode .top-bar, .hidden-mode h1, .hidden-mode p.subtitle{display:none}
+  .hidden-mode .stage{min-height:90vh;max-height:98vh;margin:0;border-radius:10px}
+  .hidden-mode #floatingToggle{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;z-index:10;cursor:pointer}
+
+  button,input{font:inherit}
+  .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0}
+  button{border:0;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;font-size:13px}
+  .primary{background:#fff;color:#111}
+  .dark{background:#333;color:#fff}
+  .danger{background:#5a2323;color:#ff9999}
+  
+  .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+  .slot-card{background:#1e1e1e;padding:8px;border-radius:10px;border:1px solid #333;text-align:left}
+  .slot-card label{font-size:11px;color:#aaa;display:block;margin-bottom:4px;font-weight:bold}
+  .slot-actions{display:flex;gap:4px}
+  .slot-actions button{padding:6px 8px;font-size:11px;flex:1;border-radius:6px}
+
+  .meter{height:14px;background:#303030;border-radius:7px;overflow:hidden;margin:6px 0}
+  #bar{height:100%;width:0%;background:#63df83;transition:width .05s}
+  #status{font-weight:800;color:#ccc;margin:4px;font-size:13px}
+  
+  label.range-label{display:block;color:#bbb;margin-top:8px;font-size:13px;text-align:left}
+  input[type=range]{width:100%;margin:4px 0}
+  .note{font-size:11px;color:#888;margin-top:8px;line-height:1.3}
+</style>
+</head>
+<body>
+<main id="appMain">
+  <div class="top-bar">
+    <div>
+      <h1>🎙️ Talking Avatar</h1>
+      <p class="subtitle">Four-frame responsive mode</p>
+    </div>
+    <button class="dark" id="modeToggleBtn">📱 Avatar Mode</button>
+  </div>
+
+  <div class="stage">
+    <div id="floatingToggle" style="display:none">⚙️ Setup</div>
+    <img id="avatar" alt="Avatar" style="display:none">
+    <div id="placeholder">Load your 4 avatar states below. Images persist automatically via browser storage.</div>
+  </div>
+
+  <div id="controlsPanel">
+    <button class="primary" id="start" style="width:100%;padding:12px;font-size:15px;margin-bottom:6px">START MICROPHONE</button>
+    <div class="meter"><div id="bar"></div></div>
+    <div id="status">Stopped</div>
+
+    <label class="range-label">Microphone Sensitivity</label>
+    <input id="sensitivity" type="range" min="1" max="100" value="25">
+
+    <div class="slots-grid">
+      <!-- Slot 1 -->
+      <div class="slot-card">
+        <label>1. Eyes Open / Closed Mouth</label>
+        <div class="slot-actions">
+          <button class="dark" onclick="triggerUpload('slot1')">Load</button>
+          <button class="danger" onclick="clearSlot('slot1')">Remove</button>
+        </div>
+      </div>
+      <!-- Slot 2 -->
+      <div class="slot-card">
+        <label>2. Eyes Open / Open Mouth</label>
+        <div class="slot-actions">
+          <button class="dark" onclick="triggerUpload('slot2')">Load</button>
+          <button class="danger" onclick="clearSlot('slot2')">Remove</button>
+        </div>
+      </div>
+      <!-- Slot 3 -->
+      <div class="slot-card">
+        <label>3. Eyes Closed / Closed Mouth</label>
+        <div class="slot-actions">
+          <button class="dark" onclick="triggerUpload('slot3')">Load</button>
+          <button class="danger" onclick="clearSlot('slot3')">Remove</button>
+        </div>
+      </div>
+      <!-- Slot 4 -->
+      <div class="slot-card">
+        <label>4. Eyes Closed / Open Mouth</label>
+        <div class="slot-actions">
+          <button class="dark" onclick="triggerUpload('slot4')">Load</button>
+          <button class="danger" onclick="clearSlot('slot4')">Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <button class="danger" id="clearAllBtn" style="font-size:11px;padding:6px 10px">Clear All Saved Images</button>
+    </div>
+
+    <input id="fileInput" type="file" accept="image/*" hidden>
+
+    <div class="note">
+      Persistent storage enabled (IndexedDB). Optimized for mobile split-screen & foldables.
+    </div>
+  </div>
+</main>
+
+<script>
+// State architecture for 4 images
+const images = { slot1: null, slot2: null, slot3: null, slot4: null };
+let activeUploadSlot = null;
+
+// Audio & Animation runtime states
+let audioContext=null, analyser=null, data=null, stream=null, running=false;
+let threshold=.035;
+let isTalking = false;
+let isBlinking = false;
+let blinkTimeout = null;
+
+// DOM Elements
+const avatar=document.getElementById('avatar');
+const placeholder=document.getElementById('placeholder');
+const bar=document.getElementById('bar');
+const status=document.getElementById('status');
+const start=document.getElementById('start');
+const fileInput=document.getElementById('fileInput');
+const appMain=document.getElementById('appMain');
+const modeToggleBtn=document.getElementById('modeToggleBtn');
+const floatingToggle=document.getElementById('floatingToggle');
+
+// --- IndexedDB Persistence Implementation ---
+const DB_NAME = 'TalkingAvatarDB';
+const STORE_NAME = 'avatarImages';
+const DB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveImageToDB(slotKey, blob) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(blob, slotKey);
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error('Error saving image to DB:', err);
+  }
+}
+
+async function removeImageFromDB(slotKey) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(slotKey);
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error('Error removing image from DB:', err);
+  }
+}
+
+async function loadAllImagesFromDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    
+    for (let slotKey of Object.keys(images)) {
+      const request = store.get(slotKey);
+      request.onsuccess = () => {
+        if (request.result) {
+          images[slotKey] = URL.createObjectURL(request.result);
+        }
+      };
+    }
+    tx.oncomplete = () => {
+      updateAvatarDisplay();
+    };
+  } catch (err) {
+    console.error('Error loading images from DB:', err);
+  }
+}
+
+async function clearAllImages() {
+  if (!confirm('Are you sure you want to clear all saved avatar images?')) return;
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => {
+      Object.keys(images).forEach(k => images[k] = null);
+      updateAvatarDisplay();
+      alert('All saved avatar images have been cleared.');
+    };
+  } catch (err) {
+    console.error('Error clearing DB:', err);
+  }
+}
+
+// --- Image Management Interface ---
+function triggerUpload(slotKey) {
+  activeUploadSlot = slotKey;
+  fileInput.value = '';
+  fileInput.click();
+}
+
+fileInput.onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeUploadSlot) return;
+  
+  // Save blob locally via IndexedDB
+  await saveImageToDB(activeUploadSlot, file);
+  images[activeUploadSlot] = URL.createObjectURL(file);
+  updateAvatarDisplay();
+};
+
+async function clearSlot(slotKey) {
+  await removeImageFromDB(slotKey);
+  images[slotKey] = null;
+  updateAvatarDisplay();
+}
+
+// --- Frame Resolution Engine (Talking + Blinking Combination) ---
+function updateAvatarDisplay() {
+  let currentKey = 'slot1';
+  if (!isBlinking && !isTalking) currentKey = 'slot1';
+  else if (!isBlinking && isTalking) currentKey = 'slot2';
+  else if (isBlinking && !isTalking) currentKey = 'slot3';
+  else if (isBlinking && isTalking) currentKey = 'slot4';
+
+  const activeURL = images[currentKey] || images['slot1'] || images['slot2'] || images['slot3'] || images['slot4'];
+
+  if (activeURL) {
+    avatar.src = activeURL;
+    avatar.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    avatar.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+}
+
+// --- Independent Blinking System ---
+function scheduleBlink() {
+  const randomInterval = Math.random() * 4500 + 2000;
+  blinkTimeout = setTimeout(() => {
+    isBlinking = true;
+    updateAvatarDisplay();
+    
+    const blinkDuration = Math.random() * 80 + 100;
+    setTimeout(() => {
+      isBlinking = false;
+      updateAvatarDisplay();
+      scheduleBlink();
+    }, blinkDuration);
+  }, randomInterval);
+}
+
+// --- UI Layout Modes (Avatar-Only vs Setup Mode) ---
+function toggleAvatarMode(enabled) {
+  if (enabled) {
+    document.body.classList.add('hidden-mode');
+    floatingToggle.style.display = 'block';
+    modeToggleBtn.textContent = '⚙️ Setup Mode';
+  } else {
+    document.body.classList.remove('hidden-mode');
+    floatingToggle.style.display = 'none';
+    modeToggleBtn.textContent = '📱 Avatar Mode';
+  }
+}
+
+modeToggleBtn.onclick = () => {
+  const isHidden = document.body.classList.contains('hidden-mode');
+  toggleAvatarMode(!isHidden);
+};
+
+floatingToggle.onclick = () => {
+  toggleAvatarMode(false);
+};
+
+// --- Sensitivity Control ---
+document.getElementById('sensitivity').oninput = e => {
+  const v = Number(e.target.value);
+  threshold = .11 - (v / 100) * .105;
+};
+
+document.getElementById('clearAllBtn').onclick = clearAllImages;
+
+// --- Microphone Engine ---
+async function startMic() {
+  if (!images.slot1 && !images.slot2 && !images.slot3 && !images.slot4) {
+    alert('Please load at least one avatar image frame first.');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Microphone access is not supported or restricted. Ensure you are using HTTPS.');
+    return;
+  }
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    data = new Float32Array(analyser.fftSize);
+
+    running = true;
+    start.textContent = 'STOP MICROPHONE';
+    status.textContent = 'LISTENING';
+    
+    scheduleBlink();
+    loop();
+  } catch (err) {
+    alert('Microphone permission denied or unavailable: ' + err.message);
+  }
+}
+
+function loop() {
+  if (!running) return;
+
+  analyser.getFloatTimeDomainData(data);
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+  const rms = Math.sqrt(sum / data.length);
+  const display = Math.min(100, rms * 900);
+  bar.style.width = display + '%';
+
+  isTalking = rms > threshold;
+  updateAvatarDisplay();
+  
+  status.textContent = isTalking ? 'TALKING' : 'LISTENING';
+  status.style.color = isTalking ? '#63df83' : '#ccc';
+
+  requestAnimationFrame(loop);
+}
+
+function stopMic() {
+  running = false;
+  if (blinkTimeout) clearTimeout(blinkTimeout);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  if (audioContext) audioContext.close();
+  stream = null; audioContext = null; analyser = null; isBlinking = false; isTalking = false;
+  
+  bar.style.width = '0%';
+  status.textContent = 'Stopped';
+  status.style.color = '#ccc';
+  start.textContent = 'START MICROPHONE';
+  updateAvatarDisplay();
+}
+
+start.onclick = () => running ? stopMic() : startMic();
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadAllImagesFromDB();
+});
+</script>
+</body>
+</html>
