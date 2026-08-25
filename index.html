@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Talking Avatar</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center}
+  main{max-width:520px;margin:auto;padding:18px 14px 28px}
+  h1{margin:4px 0 6px;font-size:26px}
+  p{color:#bbb;margin:0 0 14px}
+  .stage{height:55vh;min-height:320px;max-height:600px;background:#252525;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:12px 0}
+  #avatar{max-width:100%;max-height:100%;object-fit:contain}
+  #placeholder{color:#777;padding:30px}
+  button,input{font:inherit}
+  .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:9px 0}
+  button{border:0;border-radius:12px;padding:12px 15px;font-weight:700}
+  .primary{background:#fff;color:#111}
+  .dark{background:#333;color:#fff}
+  .meter{height:20px;background:#303030;border-radius:10px;overflow:hidden;margin:8px 0}
+  #bar{height:100%;width:0%;background:#63df83;transition:width .05s}
+  #status{font-weight:800;color:#ccc;margin:8px}
+  label{display:block;color:#bbb;margin-top:12px}
+  input[type=range]{width:100%}
+  .note{font-size:13px;color:#888;margin-top:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎙️ Talking Avatar</h1>
+  <p>Android version • your microphone controls the mouth.</p>
+
+  <div class="stage">
+    <img id="avatar" alt="Avatar" style="display:none">
+    <div id="placeholder">Load your closed-mouth and open-mouth images.</div>
+  </div>
+
+  <div class="row">
+    <button class="dark" id="closedBtn">Load Closed Mouth</button>
+    <button class="dark" id="openBtn">Load Open Mouth</button>
+  </div>
+
+  <input id="closedFile" type="file" accept="image/*" hidden>
+  <input id="openFile" type="file" accept="image/*" hidden>
+
+  <label>Sensitivity</label>
+  <input id="sensitivity" type="range" min="1" max="100" value="25">
+
+  <div class="meter"><div id="bar"></div></div>
+  <div id="status">Stopped</div>
+
+  <button class="primary" id="start">START MICROPHONE</button>
+
+  <div class="note">
+    Tip: Android browsers normally require the page to be opened through
+    HTTPS or localhost before microphone access is allowed.
+  </div>
+</main>
+
+<script>
+let closedURL=null, openURL=null;
+let audioContext=null, analyser=null, data=null, stream=null, running=false;
+let threshold=.035;
+
+const avatar=document.getElementById('avatar');
+const placeholder=document.getElementById('placeholder');
+const bar=document.getElementById('bar');
+const status=document.getElementById('status');
+const start=document.getElementById('start');
+
+function show(talking){
+  const url=talking ? openURL : closedURL;
+  if(url){
+    avatar.src=url;
+    avatar.style.display='block';
+    placeholder.style.display='none';
+  }
+}
+
+function loadFile(input, which){
+  const file=input.files[0];
+  if(!file)return;
+  const url=URL.createObjectURL(file);
+  if(which==='closed') closedURL=url; else openURL=url;
+  show(false);
+}
+
+document.getElementById('closedBtn').onclick=()=>document.getElementById('closedFile').click();
+document.getElementById('openBtn').onclick=()=>document.getElementById('openFile').click();
+document.getElementById('closedFile').onchange=e=>loadFile(e.target,'closed');
+document.getElementById('openFile').onchange=e=>loadFile(e.target,'open');
+
+document.getElementById('sensitivity').oninput=e=>{
+  // Higher slider = more sensitive = lower threshold.
+  const v=Number(e.target.value);
+  threshold=.11-(v/100)*.105;
+};
+
+async function startMic(){
+  if(!closedURL || !openURL){
+    alert('Load both images first.');
+    return;
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('This browser does not provide microphone access here. Try Chrome and open this page from a secure HTTPS address.');
+    return;
+  }
+
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}
+    });
+
+    audioContext=new (window.AudioContext||window.webkitAudioContext)();
+    const source=audioContext.createMediaStreamSource(stream);
+    analyser=audioContext.createAnalyser();
+    analyser.fftSize=512;
+    source.connect(analyser);
+    data=new Float32Array(analyser.fftSize);
+
+    running=true;
+    start.textContent='STOP MICROPHONE';
+    status.textContent='LISTENING';
+    loop();
+  }catch(err){
+    alert('Microphone permission was not available: '+err.message);
+  }
+}
+
+function loop(){
+  if(!running)return;
+
+  analyser.getFloatTimeDomainData(data);
+  let sum=0;
+  for(let i=0;i<data.length;i++) sum+=data[i]*data[i];
+  const rms=Math.sqrt(sum/data.length);
+  const display=Math.min(100,rms*900);
+  bar.style.width=display+'%';
+
+  const talking=rms>threshold;
+  show(talking);
+  status.textContent=talking?'TALKING':'LISTENING';
+  status.style.color=talking?'#63df83':'#ccc';
+
+  requestAnimationFrame(loop);
+}
+
+function stopMic(){
+  running=false;
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  if(audioContext)audioContext.close();
+  stream=null;audioContext=null;analyser=null;
+  bar.style.width='0%';
+  status.textContent='Stopped';
+  status.style.color='#ccc';
+  start.textContent='START MICROPHONE';
+  show(false);
+}
+
+start.onclick=()=>running?stopMic():startMic();
+</script>
+</body>
+</html>
