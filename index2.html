@@ -11,21 +11,50 @@
   h1{margin:4px 0 2px;font-size:22px}
   p.subtitle{color:#bbb;margin:0 0 10px;font-size:14px}
   
-  /* Stage area scales gracefully */
+  /* Stage area scales gracefully and hosts stationary background */
   .stage{flex:1;min-height:260px;max-height:70vh;background:#252525;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0;position:relative}
   
-  #avatar-container{display:inline-block;transition:transform 0.1s ease-in-out;max-width:100%;max-height:100%}
+  /* Stationary background layer */
+  #stage-bg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:1;display:none}
+  
+  /* Avatar container sits above background and handles animations safely */
+  #avatar-container{display:inline-block;max-width:100%;max-height:100%;transform-origin:center bottom;position:relative;z-index:2}
   #avatar{max-width:100%;max-height:100%;object-fit:contain;display:block}
-  #placeholder{color:#777;padding:20px;font-size:14px}
+  #placeholder{color:#777;padding:20px;font-size:14px;position:relative;z-index:2}
 
-  /* Bounce Animation Keyframes */
-  @keyframes bounceAnim {
+  /* Animation Keyframes */
+  @keyframes regularBounceAnim {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--bounce-height, -25px)); }
+    50% { transform: translateY(var(--regular-bounce-height, -10px)); }
   }
-  .bouncing {
-    animation: bounceAnim 0.4s ease-in-out infinite;
+  @keyframes excitedBounceAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(var(--excited-bounce-height, -30px)); }
   }
+  @keyframes swayAnim {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(var(--sway-angle, -5deg)); }
+    75% { transform: rotate(var(--sway-angle, 5deg)); }
+  }
+  @keyframes tiltAnim {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(var(--tilt-angle, 10deg)); }
+  }
+  @keyframes pulseAnim {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(var(--pulse-scale, 1.1)); }
+  }
+  @keyframes floatAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(var(--float-distance, -15px)); }
+  }
+
+  .anim-regular-bounce { animation: regularBounceAnim 0.8s ease-in-out infinite; }
+  .anim-excited-bounce { animation: excitedBounceAnim 0.35s ease-in-out infinite; }
+  .anim-sway { animation: swayAnim 2s ease-in-out infinite; }
+  .anim-tilt { animation: tiltAnim 1.5s ease-in-out infinite; }
+  .anim-pulse { animation: pulseAnim 1.2s ease-in-out infinite; }
+  .anim-float { animation: floatAnim 3s ease-in-out infinite; }
 
   /* Mode toggle bar */
   .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -59,6 +88,8 @@
   label.range-label{display:block;color:#bbb;margin-top:8px;font-size:13px;text-align:left}
   input[type=range]{width:100%;margin:4px 0}
   .note{font-size:11px;color:#888;margin-top:8px;line-height:1.3}
+  
+  .actions-section{background:#1a1a1a;padding:8px;border-radius:12px;margin:8px 0;border:1px solid #2a2a2a}
 </style>
 </head>
 <body>
@@ -72,10 +103,11 @@
   </div>
 
   <div class="stage">
+    <div id="stage-bg"></div>
     <div id="floatingToggle" style="display:none">⚙️ Setup</div>
     <div id="avatar-container">
       <img id="avatar" alt="Avatar" style="display:none">
-      <div id="placeholder">Load your 4 avatar states below. Images persist automatically via browser storage.</div>
+      <div id="placeholder">Load your 4 avatar states and background below. Images persist automatically via browser storage.</div>
     </div>
   </div>
 
@@ -90,12 +122,40 @@
     <label class="range-label">Blink Frequency (Speed/Rate)</label>
     <input id="blinkSpeed" type="range" min="1" max="100" value="50">
 
-    <div class="row" style="margin-top:8px">
-      <button class="dark" id="bounceToggleBtn" style="flex:1">🎉 Excited Bounce: OFF</button>
-    </div>
+    <!-- Actions & Animations Section -->
+    <div class="actions-section">
+      <p style="margin:0 0 6px 0;font-size:12px;color:#888;font-weight:bold;text-align:left">AVATAR ACTIONS & ANIMATIONS</p>
+      
+      <!-- Regular Bounce -->
+      <div class="row"><button class="dark" id="regularBounceBtn" style="flex:1">🟢 Regular Bounce: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Regular Bounce Height</label>
+      <input id="regularBounceIntensity" type="range" min="2" max="25" value="10">
 
-    <label class="range-label">Bounce Intensity / Height</label>
-    <input id="bounceIntensity" type="range" min="5" max="60" value="25">
+      <!-- Excited Bounce -->
+      <div class="row" style="margin-top:6px"><button class="dark" id="excitedBounceBtn" style="flex:1">🎉 Excited Bounce: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Excited Bounce Height</label>
+      <input id="excitedBounceIntensity" type="range" min="15" max="50" value="30">
+
+      <!-- Action 1: Sway -->
+      <div class="row" style="margin-top:6px"><button class="dark" id="swayBtn" style="flex:1">🔄 Side Sway: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Sway Angle Range</label>
+      <input id="swayIntensity" type="range" min="2" max="15" value="6">
+
+      <!-- Action 2: Head Tilt -->
+      <div class="row" style="margin-top:6px"><button class="dark" id="tiltBtn" style="flex:1">📐 Head Tilt: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Tilt Angle Range</label>
+      <input id="tiltIntensity" type="range" min="3" max="20" value="8">
+
+      <!-- Action 3: Pulse Zoom -->
+      <div class="row" style="margin-top:6px"><button class="dark" id="pulseBtn" style="flex:1">💓 Pulse Zoom: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Pulse Zoom Scale</label>
+      <input id="pulseIntensity" type="range" min="102" max="125" value="108">
+
+      <!-- Action 4: Floating Hover -->
+      <div class="row" style="margin-top:6px"><button class="dark" id="floatBtn" style="flex:1">🎈 Floating Hover: OFF</button></div>
+      <label class="range-label" style="font-size:11px">Hover Distance</label>
+      <input id="floatIntensity" type="range" min="5" max="35" value="15">
+    </div>
 
     <div class="slots-grid">
       <!-- Slot 1 -->
@@ -132,8 +192,17 @@
       </div>
     </div>
 
+    <!-- Background Slot Card -->
+    <div class="slot-card" style="margin-top:6px;width:100%">
+      <label>🖼️ Custom Stage Background</label>
+      <div class="slot-actions">
+        <button class="dark" onclick="triggerUpload('bg')">Load Background</button>
+        <button class="danger" onclick="clearSlot('bg')">Remove Background</button>
+      </div>
+    </div>
+
     <div class="row" style="margin-top:8px">
-      <button class="danger" id="clearAllBtn" style="font-size:11px;padding:6px 10px">Clear All Saved Images</button>
+      <button class="danger" id="clearAllBtn" style="font-size:11px;padding:6px 10px">Clear All Saved Images & Background</button>
     </div>
 
     <input id="fileInput" type="file" accept="image/*" hidden>
@@ -145,8 +214,8 @@
 </main>
 
 <script>
-// State architecture for 4 images
-const images = { slot1: null, slot2: null, slot3: null, slot4: null };
+// State architecture for 4 avatar frames + background
+const images = { slot1: null, slot2: null, slot3: null, slot4: null, bg: null };
 let activeUploadSlot = null;
 
 // Audio & Animation runtime states
@@ -155,12 +224,22 @@ let threshold=.035;
 let isTalking = false;
 let isBlinking = false;
 let blinkTimeout = null;
-let blinkMultiplier = 1.0; // Controlled by blink frequency slider
-let isBouncing = false;
+let blinkMultiplier = 1.0;
+
+// Action toggles
+let activeActions = {
+  regularBounce: false,
+  excitedBounce: false,
+  sway: false,
+  tilt: false,
+  pulse: false,
+  float: false
+};
 
 // DOM Elements
 const avatar=document.getElementById('avatar');
 const avatarContainer=document.getElementById('avatar-container');
+const stageBg=document.getElementById('stage-bg');
 const placeholder=document.getElementById('placeholder');
 const bar=document.getElementById('bar');
 const status=document.getElementById('status');
@@ -169,8 +248,21 @@ const fileInput=document.getElementById('fileInput');
 const appMain=document.getElementById('appMain');
 const modeToggleBtn=document.getElementById('modeToggleBtn');
 const floatingToggle=document.getElementById('floatingToggle');
-const bounceToggleBtn=document.getElementById('bounceToggleBtn');
-const bounceIntensityInput=document.getElementById('bounceIntensity');
+
+// Action Buttons & Sliders
+const regularBounceBtn = document.getElementById('regularBounceBtn');
+const excitedBounceBtn = document.getElementById('excitedBounceBtn');
+const swayBtn = document.getElementById('swayBtn');
+const tiltBtn = document.getElementById('tiltBtn');
+const pulseBtn = document.getElementById('pulseBtn');
+const floatBtn = document.getElementById('floatBtn');
+
+const regularBounceIntensity = document.getElementById('regularBounceIntensity');
+const excitedBounceIntensity = document.getElementById('excitedBounceIntensity');
+const swayIntensity = document.getElementById('swayIntensity');
+const tiltIntensity = document.getElementById('tiltIntensity');
+const pulseIntensity = document.getElementById('pulseIntensity');
+const floatIntensity = document.getElementById('floatIntensity');
 
 // --- IndexedDB Persistence Implementation ---
 const DB_NAME = 'TalkingAvatarDB';
@@ -235,6 +327,7 @@ async function loadAllImagesFromDB() {
     }
     tx.oncomplete = () => {
       updateAvatarDisplay();
+      updateBackgroundDisplay();
     };
   } catch (err) {
     console.error('Error loading images from DB:', err);
@@ -242,7 +335,7 @@ async function loadAllImagesFromDB() {
 }
 
 async function clearAllImages() {
-  if (!confirm('Are you sure you want to clear all saved avatar images?')) return;
+  if (!confirm('Are you sure you want to clear all saved avatar images and background?')) return;
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -250,7 +343,8 @@ async function clearAllImages() {
     tx.oncomplete = () => {
       Object.keys(images).forEach(k => images[k] = null);
       updateAvatarDisplay();
-      alert('All saved avatar images have been cleared.');
+      updateBackgroundDisplay();
+      alert('All saved avatar images and background have been cleared.');
     };
   } catch (err) {
     console.error('Error clearing DB:', err);
@@ -270,13 +364,33 @@ fileInput.onchange = async (e) => {
   
   await saveImageToDB(activeUploadSlot, file);
   images[activeUploadSlot] = URL.createObjectURL(file);
-  updateAvatarDisplay();
+  
+  if (activeUploadSlot === 'bg') {
+    updateBackgroundDisplay();
+  } else {
+    updateAvatarDisplay();
+  }
 };
 
 async function clearSlot(slotKey) {
   await removeImageFromDB(slotKey);
   images[slotKey] = null;
-  updateAvatarDisplay();
+  if (slotKey === 'bg') {
+    updateBackgroundDisplay();
+  } else {
+    updateAvatarDisplay();
+  }
+}
+
+// --- Background Display Engine ---
+function updateBackgroundDisplay() {
+  if (images.bg) {
+    stageBg.style.backgroundImage = `url('${images.bg}')`;
+    stageBg.style.display = 'block';
+  } else {
+    stageBg.style.backgroundImage = 'none';
+    stageBg.style.display = 'none';
+  }
 }
 
 // --- Frame Resolution Engine (Talking + Blinking Combination) ---
@@ -301,8 +415,6 @@ function updateAvatarDisplay() {
 
 // --- Independent Blinking System with Frequency Control ---
 function scheduleBlink() {
-  // Base interval modified by blinkMultiplier (slider value)
-  // Higher slider value = shorter interval = faster blinking
   const baseInterval = Math.random() * 4500 + 2000;
   const currentInterval = baseInterval / blinkMultiplier;
 
@@ -319,25 +431,34 @@ function scheduleBlink() {
   }, currentInterval);
 }
 
-// --- Excited Bounce Controls ---
-bounceToggleBtn.onclick = () => {
-  isBouncing = !isBouncing;
-  if (isBouncing) {
-    avatarContainer.classList.add('bouncing');
-    bounceToggleBtn.textContent = '🎉 Excited Bounce: ON';
-    bounceToggleBtn.classList.add('active-btn');
+// --- Action Toggle Handlers ---
+function toggleAction(actionName, btnElement, animClassName) {
+  activeActions[actionName] = !activeActions[actionName];
+  if (activeActions[actionName]) {
+    avatarContainer.classList.add(animClassName);
+    btnElement.textContent = btnElement.textContent.replace('OFF', 'ON');
+    btnElement.classList.add('active-btn');
   } else {
-    avatarContainer.classList.remove('bouncing');
-    bounceToggleBtn.textContent = '🎉 Excited Bounce: OFF';
-    bounceToggleBtn.classList.remove('active-btn');
+    avatarContainer.classList.remove(animClassName);
+    btnElement.textContent = btnElement.textContent.replace('ON', 'OFF');
+    btnElement.classList.remove('active-btn');
   }
-};
+}
 
-bounceIntensityInput.oninput = e => {
-  const val = e.target.value;
-  // Apply CSS custom property for translation height
-  avatarContainer.style.setProperty('--bounce-height', `-${val}px`);
-};
+regularBounceBtn.onclick = () => toggleAction('regularBounce', regularBounceBtn, 'anim-regular-bounce');
+excitedBounceBtn.onclick = () => toggleAction('excitedBounce', excitedBounceBtn, 'anim-excited-bounce');
+swayBtn.onclick = () => toggleAction('sway', swayBtn, 'anim-sway');
+tiltBtn.onclick = () => toggleAction('tilt', tiltBtn, 'anim-tilt');
+pulseBtn.onclick = () => toggleAction('pulse', pulseBtn, 'anim-pulse');
+floatBtn.onclick = () => toggleAction('float', floatBtn, 'anim-float');
+
+// Intensity Sliders Listeners
+regularBounceIntensity.oninput = e => avatarContainer.style.setProperty('--regular-bounce-height', `-${e.target.value}px`);
+excitedBounceIntensity.oninput = e => avatarContainer.style.setProperty('--excited-bounce-height', `-${e.target.value}px`);
+swayIntensity.oninput = e => avatarContainer.style.setProperty('--sway-angle', `${e.target.value}deg`);
+tiltIntensity.oninput = e => avatarContainer.style.setProperty('--tilt-angle', `${e.target.value}deg`);
+pulseIntensity.oninput = e => avatarContainer.style.setProperty('--pulse-scale', `${e.target.value / 100}`);
+floatIntensity.oninput = e => avatarContainer.style.setProperty('--float-distance', `-${e.target.value}px`);
 
 // --- UI Layout Modes (Avatar-Only vs Setup Mode) ---
 function toggleAvatarMode(enabled) {
@@ -369,7 +490,6 @@ document.getElementById('sensitivity').oninput = e => {
 
 document.getElementById('blinkSpeed').oninput = e => {
   const v = Number(e.target.value);
-  // Maps slider 1-100 to a frequency multiplier (0.2x to 3.0x speed)
   blinkMultiplier = 0.2 + (v / 100) * 2.8;
 };
 
@@ -446,8 +566,13 @@ start.onclick = () => running ? stopMic() : startMic();
 
 window.addEventListener('DOMContentLoaded', () => {
   loadAllImagesFromDB();
-  // Set default bounce distance
-  avatarContainer.style.setProperty('--bounce-height', '-25px');
+  // Set default animation variables
+  avatarContainer.style.setProperty('--regular-bounce-height', '-10px');
+  avatarContainer.style.setProperty('--excited-bounce-height', '-30px');
+  avatarContainer.style.setProperty('--sway-angle', '6deg');
+  avatarContainer.style.setProperty('--tilt-angle', '8deg');
+  avatarContainer.style.setProperty('--pulse-scale', '1.08');
+  avatarContainer.style.setProperty('--float-distance', '-15px');
 });
 </script>
 </body>
