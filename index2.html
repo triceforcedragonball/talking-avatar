@@ -13,8 +13,19 @@
   
   /* Stage area scales gracefully */
   .stage{flex:1;min-height:260px;max-height:70vh;background:#252525;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0;position:relative}
-  #avatar{max-width:100%;max-height:100%;object-fit:contain}
+  
+  #avatar-container{display:inline-block;transition:transform 0.1s ease-in-out;max-width:100%;max-height:100%}
+  #avatar{max-width:100%;max-height:100%;object-fit:contain;display:block}
   #placeholder{color:#777;padding:20px;font-size:14px}
+
+  /* Bounce Animation Keyframes */
+  @keyframes bounceAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(var(--bounce-height, -25px)); }
+  }
+  .bouncing {
+    animation: bounceAnim 0.4s ease-in-out infinite;
+  }
 
   /* Mode toggle bar */
   .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -33,6 +44,7 @@
   .primary{background:#fff;color:#111}
   .dark{background:#333;color:#fff}
   .danger{background:#5a2323;color:#ff9999}
+  .active-btn{background:#63df83 !important;color:#111 !important}
   
   .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
   .slot-card{background:#1e1e1e;padding:8px;border-radius:10px;border:1px solid #333;text-align:left}
@@ -61,8 +73,10 @@
 
   <div class="stage">
     <div id="floatingToggle" style="display:none">⚙️ Setup</div>
-    <img id="avatar" alt="Avatar" style="display:none">
-    <div id="placeholder">Load your 4 avatar states below. Images persist automatically via browser storage.</div>
+    <div id="avatar-container">
+      <img id="avatar" alt="Avatar" style="display:none">
+      <div id="placeholder">Load your 4 avatar states below. Images persist automatically via browser storage.</div>
+    </div>
   </div>
 
   <div id="controlsPanel">
@@ -72,6 +86,16 @@
 
     <label class="range-label">Microphone Sensitivity</label>
     <input id="sensitivity" type="range" min="1" max="100" value="25">
+
+    <label class="range-label">Blink Frequency (Speed/Rate)</label>
+    <input id="blinkSpeed" type="range" min="1" max="100" value="50">
+
+    <div class="row" style="margin-top:8px">
+      <button class="dark" id="bounceToggleBtn" style="flex:1">🎉 Excited Bounce: OFF</button>
+    </div>
+
+    <label class="range-label">Bounce Intensity / Height</label>
+    <input id="bounceIntensity" type="range" min="5" max="60" value="25">
 
     <div class="slots-grid">
       <!-- Slot 1 -->
@@ -131,9 +155,12 @@ let threshold=.035;
 let isTalking = false;
 let isBlinking = false;
 let blinkTimeout = null;
+let blinkMultiplier = 1.0; // Controlled by blink frequency slider
+let isBouncing = false;
 
 // DOM Elements
 const avatar=document.getElementById('avatar');
+const avatarContainer=document.getElementById('avatar-container');
 const placeholder=document.getElementById('placeholder');
 const bar=document.getElementById('bar');
 const status=document.getElementById('status');
@@ -142,6 +169,8 @@ const fileInput=document.getElementById('fileInput');
 const appMain=document.getElementById('appMain');
 const modeToggleBtn=document.getElementById('modeToggleBtn');
 const floatingToggle=document.getElementById('floatingToggle');
+const bounceToggleBtn=document.getElementById('bounceToggleBtn');
+const bounceIntensityInput=document.getElementById('bounceIntensity');
 
 // --- IndexedDB Persistence Implementation ---
 const DB_NAME = 'TalkingAvatarDB';
@@ -239,7 +268,6 @@ fileInput.onchange = async (e) => {
   const file = e.target.files[0];
   if (!file || !activeUploadSlot) return;
   
-  // Save blob locally via IndexedDB
   await saveImageToDB(activeUploadSlot, file);
   images[activeUploadSlot] = URL.createObjectURL(file);
   updateAvatarDisplay();
@@ -271,9 +299,13 @@ function updateAvatarDisplay() {
   }
 }
 
-// --- Independent Blinking System ---
+// --- Independent Blinking System with Frequency Control ---
 function scheduleBlink() {
-  const randomInterval = Math.random() * 4500 + 2000;
+  // Base interval modified by blinkMultiplier (slider value)
+  // Higher slider value = shorter interval = faster blinking
+  const baseInterval = Math.random() * 4500 + 2000;
+  const currentInterval = baseInterval / blinkMultiplier;
+
   blinkTimeout = setTimeout(() => {
     isBlinking = true;
     updateAvatarDisplay();
@@ -284,8 +316,28 @@ function scheduleBlink() {
       updateAvatarDisplay();
       scheduleBlink();
     }, blinkDuration);
-  }, randomInterval);
+  }, currentInterval);
 }
+
+// --- Excited Bounce Controls ---
+bounceToggleBtn.onclick = () => {
+  isBouncing = !isBouncing;
+  if (isBouncing) {
+    avatarContainer.classList.add('bouncing');
+    bounceToggleBtn.textContent = '🎉 Excited Bounce: ON';
+    bounceToggleBtn.classList.add('active-btn');
+  } else {
+    avatarContainer.classList.remove('bouncing');
+    bounceToggleBtn.textContent = '🎉 Excited Bounce: OFF';
+    bounceToggleBtn.classList.remove('active-btn');
+  }
+};
+
+bounceIntensityInput.oninput = e => {
+  const val = e.target.value;
+  // Apply CSS custom property for translation height
+  avatarContainer.style.setProperty('--bounce-height', `-${val}px`);
+};
 
 // --- UI Layout Modes (Avatar-Only vs Setup Mode) ---
 function toggleAvatarMode(enabled) {
@@ -309,10 +361,16 @@ floatingToggle.onclick = () => {
   toggleAvatarMode(false);
 };
 
-// --- Sensitivity Control ---
+// --- Sliders Configuration ---
 document.getElementById('sensitivity').oninput = e => {
   const v = Number(e.target.value);
   threshold = .11 - (v / 100) * .105;
+};
+
+document.getElementById('blinkSpeed').oninput = e => {
+  const v = Number(e.target.value);
+  // Maps slider 1-100 to a frequency multiplier (0.2x to 3.0x speed)
+  blinkMultiplier = 0.2 + (v / 100) * 2.8;
 };
 
 document.getElementById('clearAllBtn').onclick = clearAllImages;
@@ -388,6 +446,8 @@ start.onclick = () => running ? stopMic() : startMic();
 
 window.addEventListener('DOMContentLoaded', () => {
   loadAllImagesFromDB();
+  // Set default bounce distance
+  avatarContainer.style.setProperty('--bounce-height', '-25px');
 });
 </script>
 </body>
