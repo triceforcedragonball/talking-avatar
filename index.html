@@ -157,10 +157,57 @@
   .hidden-mode .top-bar, .hidden-mode h1, .hidden-mode p.subtitle{display:none}
   .hidden-mode .stage-wrapper{height:100vh;max-height:100vh;margin:0;border-radius:0}
   
-  .floating-nav{position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:10}
-  .floating-btn{background:rgba(0,0,0,0.7);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;cursor:pointer;border:1px solid #444;font-weight:700}
+  /* Horizontal Floating Nav & Circular Toggle Button */
+  .floating-nav{
+    position:absolute;
+    top:12px;
+    right:12px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    z-index:10;
+  }
+  .floating-menu-items {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-direction: row;
+  }
+  .hidden-menu .floating-menu-items {display:none;}
   
-  .flyout-panel{position:absolute;top:54px;right:12px;background:rgba(20,20,20,0.96);border:1px solid #444;border-radius:12px;width:320px;max-height:420px;display:flex;flex-direction:column;z-index:10;display:none;backdrop-filter:blur(6px);text-align:left;pointer-events:auto}
+  .floating-btn{background:rgba(0,0,0,0.7);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;cursor:pointer;border:1px solid #444;font-weight:700;backdrop-filter:blur(4px);white-space:nowrap}
+  
+  .floating-menu-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.85);
+    border-color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+  }
+  
+  /* Flyout panels positioned strictly underneath the buttons row so tabs aren't covered */
+  .flyout-panel{
+    position:absolute;
+    top:60px;
+    right:12px;
+    background:rgba(20,20,20,0.96);
+    border:1px solid #444;
+    border-radius:12px;
+    width:320px;
+    max-height:420px;
+    display:flex;
+    flex-direction:column;
+    z-index:10;
+    display:none;
+    backdrop-filter:blur(6px);
+    text-align:left;
+    pointer-events:auto;
+  }
   .flyout-panel.show{display:flex}
 
   .flyout-header{position:sticky;top:0;background:rgba(20,20,20,0.98);padding:10px 12px 6px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;z-index:5;border-top-left-radius:12px;border-top-right-radius:12px}
@@ -230,11 +277,14 @@
   </div>
 
   <div class="stage-wrapper" id="stageWrapper">
-    <div class="floating-nav" id="floatingNav" style="display:none">
-      <div class="floating-btn" id="floatingGridToggle">📏 Grid</div>
-      <div class="floating-btn" id="floatingMasterZoomToggle">🗺️ Layout</div>
-      <div class="floating-btn" id="floatingTtsToggleBtn">💬 TTS & Motions</div>
-      <div class="floating-btn" id="floatingToggle">⚙️ Setup</div>
+    <div class="floating-nav hidden-menu" id="floatingNav" style="display:none">
+      <div class="floating-menu-items" id="floatingMenuItems">
+        <div class="floating-btn" id="floatingGridToggle">📏 Grid</div>
+        <div class="floating-btn" id="floatingMasterZoomToggle">🗺️ Layout</div>
+        <div class="floating-btn" id="floatingTtsToggleBtn">💬 TTS & Motions</div>
+        <div class="floating-btn" id="floatingToggle">⚙️ Setup</div>
+      </div>
+      <div class="floating-btn floating-menu-toggle" id="floatingMenuToggleBtn" title="Toggle Menu">◀</div>
     </div>
 
     <!-- AVATAR MODE MASTER & LAYER FLYOUT PANEL -->
@@ -592,6 +642,7 @@ const fileInput=document.getElementById('fileInput');
 const appMain=document.getElementById('appMain');
 const modeToggleBtn=document.getElementById('modeToggleBtn');
 const floatingNav=document.getElementById('floatingNav');
+const floatingMenuToggleBtn=document.getElementById('floatingMenuToggleBtn');
 const floatingToggle=document.getElementById('floatingToggle');
 const floatingMasterZoomToggle=document.getElementById('floatingMasterZoomToggle');
 const floatingGridToggle=document.getElementById('floatingGridToggle');
@@ -674,6 +725,39 @@ function openDB() {
   });
 }
 
+// Added back missing IndexedDB helper functions
+async function saveImageToDB(slotKey, file) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(file, slotKey);
+  } catch (err) { console.error(err); }
+}
+
+async function removeImageFromDB(slotKey) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(slotKey);
+  } catch (err) { console.error(err); }
+}
+
+async function clearAllImages() {
+  if (!confirm('Are you sure you want to clear all saved images and settings?')) return;
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    for (let key of Object.keys(images)) {
+      images[key] = null;
+    }
+    updateBackgroundDisplay();
+    updateForegroundDisplay();
+    updateAvatarDisplay();
+    resetAllTransforms();
+  } catch (err) { console.error(err); }
+}
+
 function toggleLock(key) {
   locks[key] = !locks[key];
   
@@ -704,22 +788,6 @@ function toggleLock(key) {
     posXRs.forEach(r => { if(r) r.disabled = false; });
     posYRs.forEach(r => { if(r) r.disabled = false; });
   }
-}
-
-async function saveImageToDB(slotKey, blob) {
-  try {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(blob, slotKey);
-  } catch (err) { console.error(err); }
-}
-
-async function removeImageFromDB(slotKey) {
-  try {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(slotKey);
-  } catch (err) { console.error(err); }
 }
 
 async function loadAllImagesFromDB() {
@@ -762,38 +830,6 @@ async function loadAllImagesFromDB() {
       updateAvatarTransformStyles();
       updateFgTransformStyles();
       updateStageScaleFit();
-    };
-  } catch (err) { console.error(err); }
-}
-
-async function clearAllImages() {
-  if (!confirm('Are you sure you want to clear all saved avatar images, backgrounds, foregrounds, and settings?')) return;
-  try {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).clear();
-    tx.oncomplete = () => {
-      Object.keys(images).forEach(k => images[k] = null);
-      tiktokUsernameInput.value = '';
-      flyoutTiktokUsername.value = '';
-      setStageBgColor('#000000');
-      
-      masterScaleVal = 1.0; masterScaleRange.value = 100; flyoutMasterScaleRange.value = 100;
-      masterPosXVal = 0; masterPosXRange.value = 0; flyoutMasterPosXRange.value = 0;
-      masterPosYVal = 0; masterPosYRange.value = 0; flyoutMasterPosYRange.value = 0;
-
-      bgScaleVal = 1.0; bgScaleRange.value = 100; flyoutBgScaleRange.value = 100; bgPosXVal = 0; bgPosXRange.value = 0; flyoutBgPosXRange.value = 0; bgPosYVal = 0; bgPosYRange.value = 0; flyoutBgPosYRange.value = 0;
-      avatarScaleVal = 1.0; avatarScaleRange.value = 100; flyoutAvatarScaleRange.value = 100; avatarPosXVal = 0; avatarPosXRange.value = 0; flyoutAvatarPosXRange.value = 0; avatarPosYVal = 0; avatarPosYRange.value = 0; flyoutAvatarPosYRange.value = 0;
-      fgScaleVal = 1.0; fgScaleRange.value = 100; flyoutFgScaleRange.value = 100; fgPosXVal = 0; fgPosXRange.value = 0; flyoutFgPosXRange.value = 0; fgPosYVal = 0; fgPosYRange.value = 0; flyoutFgPosYRange.value = 0;
-
-      updateBackgroundDisplay();
-      updateAvatarDisplay();
-      updateForegroundDisplay();
-      updateMasterTransformStyles();
-      updateBgTransformStyles();
-      updateAvatarTransformStyles();
-      updateFgTransformStyles();
-      alert('All saved settings and items have been cleared.');
     };
   } catch (err) { console.error(err); }
 }
@@ -1164,6 +1200,15 @@ function toggleAvatarMode(enabled) {
   }
   setTimeout(updateStageScaleFit, 100);
 }
+
+floatingMenuToggleBtn.onclick = () => {
+  const isHidden = floatingNav.classList.toggle('hidden-menu');
+  floatingMenuToggleBtn.textContent = isHidden ? '◀' : '▶';
+  if (isHidden) {
+    avatarMasterFlyout.classList.remove('show');
+    avatarTtsFlyout.classList.remove('show');
+  }
+};
 
 modeToggleBtn.onclick = () => toggleAvatarMode(!document.body.classList.contains('hidden-mode'));
 floatingToggle.onclick = () => toggleAvatarMode(false);
