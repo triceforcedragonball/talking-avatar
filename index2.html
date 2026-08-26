@@ -6,47 +6,55 @@
 <title>Talking Avatar</title>
 <style>
   *{box-sizing:border-box}
-  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;min-height:100vh}
-  main{max-width:520px;width:100%;margin:auto;padding:12px 14px 24px;display:flex;flex-direction:column;flex:1}
+  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  
+  /* Main container takes full screen height with fixed header and stage at top */
+  main{max-width:520px;width:100%;margin:0 auto;padding:12px 14px 0;display:flex;flex-direction:column;height:100%}
+  
   h1{margin:4px 0 2px;font-size:22px}
   p.subtitle{color:#bbb;margin:0 0 10px;font-size:14px}
   
-  /* Stage area scales gracefully and hosts stationary background */
-  .stage{flex:1;min-height:260px;max-height:70vh;background:#252525;border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0;position:relative}
+  /* Stage area pinned at the top and non-scrollable (uses dynamic stage background color variable) */
+  .stage-wrapper{width:100%;height:280px;background:var(--stage-bg-color, #000000);border-radius:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:8px 0;position:relative;flex-shrink:0}
   
-  /* Stationary background layer */
-  #stage-bg{position:absolute;inset:0;background-size:cover;background-position:center;z-index:1;display:none}
+  .stage{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;transform:translate(var(--master-pos-x, 0px), var(--master-pos-y, 0px)) scale(var(--master-scale, 1));transform-origin:center center;transition:transform 0.05s ease-out}
+
+  /* Stationary background layer preserving aspect ratio */
+  #stage-bg{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;z-index:1;display:none}
   
-  /* Avatar container sits above background and handles animations safely */
-  #avatar-container{display:inline-block;max-width:100%;max-height:100%;transform-origin:center bottom;position:relative;z-index:2}
+  /* Foreground overlay layer sitting on top of avatar */
+  #stage-fg{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;z-index:3;pointer-events:none;display:none;transform:translateY(var(--fg-offset-y, 0px)) scale(var(--fg-scale, 1));transform-origin:center center}
+  
+  /* Avatar container with dynamic scaling and positioning support */
+  #avatar-container{display:inline-block;transform-origin:center bottom;position:relative;z-index:2;transform:translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1));transition:transform 0.05s ease-out}
   #avatar{max-width:100%;max-height:100%;object-fit:contain;display:block}
   #placeholder{color:#777;padding:20px;font-size:14px;position:relative;z-index:2}
 
   /* Animation Keyframes */
   @keyframes regularBounceAnim {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--anim-intensity, -10px)); }
+    0%, 100% { transform: translateY(0) scale(var(--avatar-scale, 1)); }
+    50% { transform: translateY(calc(var(--anim-intensity, -10px) + var(--avatar-offset-y, 0px))) scale(var(--avatar-scale, 1)); }
   }
   @keyframes excitedBounceAnim {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(var(--anim-intensity, -30px)); }
+    0%, 100% { transform: translateY(0) scale(var(--avatar-scale, 1)); }
+    50% { transform: translateY(calc(var(--anim-intensity, -30px) + var(--avatar-offset-y, 0px))) scale(var(--avatar-scale, 1)); }
   }
   @keyframes swayAnim {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(calc(var(--anim-intensity, 6deg) * -1)); }
-    75% { transform: rotate(var(--anim-intensity, 6deg)); }
+    0%, 100% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)) rotate(0deg); }
+    25% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)) rotate(calc(var(--anim-intensity, 6deg) * -1)); }
+    75% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)) rotate(var(--anim-intensity, 6deg)); }
   }
   @keyframes tiltAnim {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(var(--anim-intensity, 8deg)); }
+    0%, 100% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)) rotate(0deg); }
+    50% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)) rotate(var(--anim-intensity, 8deg)); }
   }
   @keyframes pulseAnim {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(var(--anim-intensity, 1.08)); }
+    0%, 100% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)); }
+    50% { transform: translateY(var(--avatar-offset-y, 0px)) scale(calc(var(--avatar-scale, 1) * var(--anim-intensity, 1.08))); }
   }
   @keyframes floatAnim {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(calc(var(--anim-intensity, 15px) * -1)); }
+    0%, 100% { transform: translateY(var(--avatar-offset-y, 0px)) scale(var(--avatar-scale, 1)); }
+    50% { transform: translateY(calc(var(--avatar-offset-y, 0px) + calc(var(--anim-intensity, 15px) * -1))) scale(var(--avatar-scale, 1)); }
   }
 
   .anim-regular-bounce { animation: regularBounceAnim 0.8s ease-in-out infinite; }
@@ -57,15 +65,40 @@
   .anim-float { animation: floatAnim 3s ease-in-out infinite; }
 
   /* Mode toggle bar */
-  .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-shrink:0}
   
-  /* Collapsible settings panel for Avatar-only mode */
-  #controlsPanel{transition:all 0.3s ease}
-  .hidden-mode #controlsPanel{display:none}
-  .hidden-mode main{max-width:100%;padding:4px;height:100vh;justify-content:center}
+  /* Scrollable Settings Panel Underneath */
+  #scrollableControls {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 30px;
+    scrollbar-width: thin;
+    scrollbar-color: #444 #151515;
+    text-align: left;
+  }
+  #scrollableControls::-webkit-scrollbar { width: 6px; }
+  #scrollableControls::-webkit-scrollbar-track { background: #151515; }
+  #scrollableControls::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+  #controlsPanel{display:flex;flex-direction:column;gap:6px}
+  
+  .hidden-mode #scrollableControls{display:none}
+  .hidden-mode main{max-width:100%;padding:0;height:100vh}
   .hidden-mode .top-bar, .hidden-mode h1, .hidden-mode p.subtitle{display:none}
-  .hidden-mode .stage{min-height:90vh;max-height:98vh;margin:0;border-radius:10px}
-  .hidden-mode #floatingToggle{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;z-index:10;cursor:pointer}
+  .hidden-mode .stage-wrapper{height:100vh;max-height:100vh;margin:0;border-radius:0}
+  
+  /* Floating Overlay Controls in Avatar Mode */
+  .floating-nav{position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:10}
+  .floating-btn{background:rgba(0,0,0,0.7);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;cursor:pointer;border:1px solid #444;font-weight:700}
+  
+  /* Flyout Drawers for Avatar Mode (Wider & Shorter with Sticky Header) */
+  .flyout-panel{position:absolute;top:54px;right:12px;background:rgba(20,20,20,0.96);border:1px solid #444;border-radius:12px;width:320px;max-height:260px;display:flex;flex-direction:column;z-index:10;display:none;backdrop-filter:blur(6px);text-align:left}
+  .flyout-panel.show{display:flex}
+
+  .flyout-header{position:sticky;top:0;background:rgba(20,20,20,0.98);padding:10px 12px 6px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;z-index:5;border-top-left-radius:12px;border-top-right-radius:12px}
+  .flyout-body{padding:8px 12px 12px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:#666 #141414}
+  .flyout-body::-webkit-scrollbar{width:8px}
+  .flyout-body::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
 
   button,input,select{font:inherit}
   .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0}
@@ -73,9 +106,19 @@
   .primary{background:#fff;color:#111}
   .dark{background:#333;color:#fff}
   .danger{background:#5a2323;color:#ff9999}
+  .active-btn{background:#63df83 !important;color:#111 !important}
   
-  select{width:100%;padding:10px;border-radius:10px;background:#222;color:#fff;border:1px solid #444;font-weight:700;font-size:13px}
+  select,input[type=text]{width:100%;padding:10px;border-radius:10px;background:#222;color:#fff;border:1px solid #444;font-weight:700;font-size:13px}
   
+  /* Color Palette Swatches */
+  .color-palette{display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;margin:4px 0 8px}
+  .color-swatch{height:24px;border-radius:6px;border:1px solid #555;cursor:pointer;transition:transform 0.1s}
+  .color-swatch:hover{transform:scale(1.1)}
+  .color-picker-row{display:flex;gap:6px;align-items:center;margin:4px 0}
+  input[type=color]{-webkit-appearance:none;border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;background:none}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+  input[type=color]::-webkit-color-swatch{border:1px solid #555;border-radius:8px}
+
   .slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
   .slot-card{background:#1e1e1e;padding:8px;border-radius:10px;border:1px solid #333;text-align:left}
   .slot-card label{font-size:11px;color:#aaa;display:block;margin-bottom:4px;font-weight:bold}
@@ -84,13 +127,15 @@
 
   .meter{height:14px;background:#303030;border-radius:7px;overflow:hidden;margin:6px 0}
   #bar{height:100%;width:0%;background:#63df83;transition:width .05s}
-  #status{font-weight:800;color:#ccc;margin:4px;font-size:13px}
+  #status{font-weight:800;color:#ccc;margin:4px;font-size:13px;text-align:center}
   
   label.range-label{display:block;color:#bbb;margin-top:8px;font-size:13px;text-align:left}
   input[type=range]{width:100%;margin:4px 0}
-  .note{font-size:11px;color:#888;margin-top:8px;line-height:1.3}
+  .note{font-size:11px;color:#888;margin-top:12px;line-height:1.3;text-align:center}
   
-  .actions-section{background:#1a1a1a;padding:8px;border-radius:12px;margin:8px 0;border:1px solid #2a2a2a}
+  /* Section Card Styling */
+  .section-card{background:#1a1a1a;border-radius:12px;border:1px solid #2a2a2a;padding:10px;margin-top:8px}
+  .section-title{font-size:12px;color:#888;font-weight:bold;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
 </style>
 </head>
 <body>
@@ -98,108 +143,284 @@
   <div class="top-bar">
     <div>
       <h1>🎙️ Talking Avatar</h1>
-      <p class="subtitle">Four-frame responsive mode</p>
+      <p class="subtitle">Four-frame responsive mode + TikTok TTS</p>
     </div>
     <button class="dark" id="modeToggleBtn">📱 Avatar Mode</button>
   </div>
 
-  <div class="stage">
-    <div id="stage-bg"></div>
-    <div id="floatingToggle" style="display:none">⚙️ Setup</div>
-    <div id="avatar-container">
-      <img id="avatar" alt="Avatar" style="display:none">
-      <div id="placeholder">Load your 4 avatar states and background below. Images persist automatically via browser storage.</div>
+  <!-- STAGE VIEWING AREA PINNED AT THE TOP -->
+  <div class="stage-wrapper" id="stageWrapper">
+    <div class="floating-nav" id="floatingNav" style="display:none">
+      <div class="floating-btn" id="floatingMasterZoomToggle">🗺️ Sizing</div>
+      <div class="floating-btn" id="floatingTtsToggleBtn">💬 TTS</div>
+      <div class="floating-btn" id="floatingToggle">⚙️ Setup</div>
+    </div>
+
+    <!-- Scrollable Master Zoom & Sizing Flyout Panel for Avatar Mode Only -->
+    <div class="flyout-panel" id="avatarMasterFlyout">
+      <div class="flyout-header">
+        <span style="font-size:11px;color:#888;font-weight:bold">🗺️ SIZING & CONTROLS</span>
+        <div style="display:flex;gap:4px">
+          <button class="dark" id="flyoutLockSlidersBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">🔓 Lock Sliders</button>
+          <button class="dark" id="flyoutResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset</button>
+        </div>
+      </div>
+      
+      <div class="flyout-body">
+        <span style="font-size:11px;color:#888;font-weight:bold">🎨 STAGE BACKGROUND COLOR</span>
+        <div class="color-palette" id="flyoutColorPalette">
+          <div class="color-swatch" style="background:#000000" data-color="#000000" title="Pitch Black"></div>
+          <div class="color-swatch" style="background:#111111" data-color="#111111" title="Dark Gray"></div>
+          <div class="color-swatch" style="background:#0b192c" data-color="#0b192c" title="Studio Blue"></div>
+          <div class="color-swatch" style="background:#1e1026" data-color="#1e1026" title="Stream Purple"></div>
+          <div class="color-swatch" style="background:#0b2e13" data-color="#0b2e13" title="Chroma Green"></div>
+          <div class="color-swatch" style="background:#261810" data-color="#261810" title="Warm Charcoal"></div>
+        </div>
+        <div class="color-picker-row">
+          <input type="color" id="flyoutBgColorPicker" value="#000000">
+          <span style="font-size:11px;color:#bbb">Custom Background Color</span>
+        </div>
+
+        <hr style="border:0;border-top:1px solid #333;margin:8px 0">
+
+        <label class="range-label" style="font-size:10px;margin-top:2px">Master Scale</label>
+        <input id="flyoutMasterScale" type="range" min="20" max="250" value="100">
+
+        <label class="range-label" style="font-size:10px">Master Pos X</label>
+        <input id="flyoutMasterPosX" type="range" min="-200" max="200" value="0">
+
+        <label class="range-label" style="font-size:10px">Master Pos Y</label>
+        <input id="flyoutMasterPosY" type="range" min="-200" max="200" value="0">
+
+        <hr style="border:0;border-top:1px solid #333;margin:10px 0">
+
+        <span style="font-size:11px;color:#888;font-weight:bold">📐 AVATAR SIZING</span>
+        <label class="range-label" style="font-size:10px;margin-top:2px">Avatar Scale</label>
+        <input id="flyoutAvatarScale" type="range" min="20" max="250" value="100">
+        <label class="range-label" style="font-size:10px">Avatar Pos Y</label>
+        <input id="flyoutAvatarPosY" type="range" min="-150" max="150" value="0">
+
+        <hr style="border:0;border-top:1px solid #333;margin:10px 0">
+
+        <span style="font-size:11px;color:#888;font-weight:bold">🖼️ FOREGROUND SIZING</span>
+        <label class="range-label" style="font-size:10px;margin-top:2px">Foreground Scale</label>
+        <input id="flyoutFgScale" type="range" min="20" max="250" value="100">
+        <label class="range-label" style="font-size:10px">Foreground Pos Y</label>
+        <input id="flyoutFgPosY" type="range" min="-150" max="150" value="0">
+      </div>
+    </div>
+
+    <!-- Dedicated TikTok TTS Flyout Panel for Avatar Mode Only -->
+    <div class="flyout-panel" id="avatarTtsFlyout">
+      <div class="flyout-header">
+        <span style="font-size:11px;color:#888;font-weight:bold">💬 TIKTOK CHAT TTS</span>
+      </div>
+      
+      <div class="flyout-body">
+        <label class="range-label" style="font-size:10px;margin-top:2px">TikTok Username</label>
+        <input id="flyoutTiktokUsername" type="text" placeholder="username (no @)" style="font-size:11px;padding:6px;margin-bottom:6px">
+
+        <div style="display:flex;gap:4px;margin-bottom:6px">
+          <button class="dark" id="flyoutTtsToggleBtn" style="flex:1;padding:6px;font-size:11px">🔊 OFF</button>
+          <button class="dark" id="flyoutTestTtsBtn" style="flex:1;padding:6px;font-size:11px">Test Voice</button>
+        </div>
+
+        <label class="range-label" style="font-size:10px">TTS Speed</label>
+        <input id="flyoutTtsSpeed" type="range" min="50" max="150" value="100">
+
+        <label class="range-label" style="font-size:10px">TTS Volume</label>
+        <input id="flyoutTtsVolume" type="range" min="0" max="100" value="100">
+      </div>
+    </div>
+
+    <div class="stage" id="stageContainer">
+      <div id="stage-bg"></div>
+      <div id="stage-fg"></div>
+      <div id="avatar-container">
+        <img id="avatar" alt="Avatar" style="display:none">
+        <div id="placeholder">Load your avatar states, background, and foreground below. Images persist automatically via browser storage.</div>
+      </div>
     </div>
   </div>
 
-  <div id="controlsPanel">
-    <button class="primary" id="start" style="width:100%;padding:12px;font-size:15px;margin-bottom:6px">START MICROPHONE</button>
-    <div class="meter"><div id="bar"></div></div>
-    <div id="status">Stopped</div>
+  <!-- SCROLLABLE WINDOW UNDERNEATH -->
+  <div id="scrollableControls">
+    <div id="controlsPanel">
+      <button class="primary" id="start" style="width:100%;padding:12px;font-size:15px;margin-bottom:2px">START MICROPHONE</button>
+      <div class="meter"><div id="bar"></div></div>
+      <div id="status">Stopped</div>
 
-    <label class="range-label">Microphone Sensitivity</label>
-    <input id="sensitivity" type="range" min="1" max="100" value="25">
+      <!-- SECTION: AVATAR PHOTOS & ASSETS -->
+      <div class="section-card">
+        <div class="section-title">🖼️ AVATAR PHOTOS & STAGE ASSETS</div>
+        <div class="slots-grid">
+          <!-- Slot 1 -->
+          <div class="slot-card">
+            <label>1. Eyes Open / Closed Mouth</label>
+            <div class="slot-actions">
+              <button class="dark" onclick="triggerUpload('slot1')">Load</button>
+              <button class="danger" onclick="clearSlot('slot1')">Remove</button>
+            </div>
+          </div>
+          <!-- Slot 2 -->
+          <div class="slot-card">
+            <label>2. Eyes Open / Open Mouth</label>
+            <div class="slot-actions">
+              <button class="dark" onclick="triggerUpload('slot2')">Load</button>
+              <button class="danger" onclick="clearSlot('slot2')">Remove</button>
+            </div>
+          </div>
+          <!-- Slot 3 -->
+          <div class="slot-card">
+            <label>3. Eyes Closed / Closed Mouth</label>
+            <div class="slot-actions">
+              <button class="dark" onclick="triggerUpload('slot3')">Load</button>
+              <button class="danger" onclick="clearSlot('slot3')">Remove</button>
+            </div>
+          </div>
+          <!-- Slot 4 -->
+          <div class="slot-card">
+            <label>4. Eyes Closed / Open Mouth</label>
+            <div class="slot-actions">
+              <button class="dark" onclick="triggerUpload('slot4')">Load</button>
+              <button class="danger" onclick="clearSlot('slot4')">Remove</button>
+            </div>
+          </div>
+        </div>
 
-    <label class="range-label">Blink Frequency (Speed/Rate)</label>
-    <input id="blinkSpeed" type="range" min="1" max="100" value="50">
+        <!-- Background Slot Card -->
+        <div class="slot-card" style="margin-top:6px;width:100%">
+          <label>🖼️ Custom Stage Background</label>
+          <div class="slot-actions">
+            <button class="dark" onclick="triggerUpload('bg')">Load Background</button>
+            <button class="danger" onclick="clearSlot('bg')">Remove Background</button>
+          </div>
+        </div>
 
-    <!-- Single Action Menu & Intensity Slider Section -->
-    <div class="actions-section">
-      <p style="margin:0 0 6px 0;font-size:12px;color:#888;font-weight:bold;text-align:left">AVATAR ACTION SELECTOR</p>
-      
-      <select id="actionSelect">
-        <option value="none">✨ No Active Action</option>
-        <option value="anim-regular-bounce">🟢 Regular Bounce</option>
-        <option value="anim-excited-bounce">🎉 Excited Bounce</option>
-        <option value="anim-sway">🔄 Side Sway</option>
-        <option value="anim-tilt">📐 Head Tilt</option>
-        <option value="anim-pulse">💓 Pulse Zoom</option>
-        <option value="anim-float">🎈 Floating Hover</option>
-      </select>
-
-      <label class="range-label" id="intensityLabel">Action Intensity</label>
-      <input id="actionIntensity" type="range" min="2" max="50" value="10">
-    </div>
-
-    <div class="slots-grid">
-      <!-- Slot 1 -->
-      <div class="slot-card">
-        <label>1. Eyes Open / Closed Mouth</label>
-        <div class="slot-actions">
-          <button class="dark" onclick="triggerUpload('slot1')">Load</button>
-          <button class="danger" onclick="clearSlot('slot1')">Remove</button>
+        <!-- Foreground Slot Card -->
+        <div class="slot-card" style="margin-top:6px;width:100%">
+          <label>🎭 Custom Foreground Overlay</label>
+          <div class="slot-actions">
+            <button class="dark" onclick="triggerUpload('fg')">Load Foreground</button>
+            <button class="danger" onclick="clearSlot('fg')">Remove Foreground</button>
+          </div>
         </div>
       </div>
-      <!-- Slot 2 -->
-      <div class="slot-card">
-        <label>2. Eyes Open / Open Mouth</label>
-        <div class="slot-actions">
-          <button class="dark" onclick="triggerUpload('slot2')">Load</button>
-          <button class="danger" onclick="clearSlot('slot2')">Remove</button>
+
+      <!-- SECTION: STAGE BACKGROUND COLOR & MASTER ZOOM -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>🎨 STAGE BACKGROUND COLOR & ZOOM</span>
+          <button class="dark" id="setupResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset</button>
         </div>
-      </div>
-      <!-- Slot 3 -->
-      <div class="slot-card">
-        <label>3. Eyes Closed / Closed Mouth</label>
-        <div class="slot-actions">
-          <button class="dark" onclick="triggerUpload('slot3')">Load</button>
-          <button class="danger" onclick="clearSlot('slot3')">Remove</button>
+
+        <span style="font-size:11px;color:#aaa;display:block;margin-bottom:4px">Select Background Color</span>
+        <div class="color-palette" id="setupColorPalette">
+          <div class="color-swatch" style="background:#000000" data-color="#000000" title="Pitch Black"></div>
+          <div class="color-swatch" style="background:#111111" data-color="#111111" title="Dark Gray"></div>
+          <div class="color-swatch" style="background:#0b192c" data-color="#0b192c" title="Studio Blue"></div>
+          <div class="color-swatch" style="background:#1e1026" data-color="#1e1026" title="Stream Purple"></div>
+          <div class="color-swatch" style="background:#0b2e13" data-color="#0b2e13" title="Chroma Green"></div>
+          <div class="color-swatch" style="background:#261810" data-color="#261810" title="Warm Charcoal"></div>
         </div>
-      </div>
-      <!-- Slot 4 -->
-      <div class="slot-card">
-        <label>4. Eyes Closed / Open Mouth</label>
-        <div class="slot-actions">
-          <button class="dark" onclick="triggerUpload('slot4')">Load</button>
-          <button class="danger" onclick="clearSlot('slot4')">Remove</button>
+        <div class="color-picker-row">
+          <input type="color" id="setupBgColorPicker" value="#000000">
+          <span style="font-size:11px;color:#bbb">Custom Background Color Picker</span>
         </div>
+
+        <hr style="border:0;border-top:1px solid #333;margin:8px 0">
+        
+        <label class="range-label" style="font-size:11px;margin-top:2px">Master Scale (Resize Everything)</label>
+        <input id="masterScaleRange" type="range" min="20" max="250" value="100">
+
+        <label class="range-label" style="font-size:11px">Master Position X (Left / Right)</label>
+        <input id="masterPosXRange" type="range" min="-200" max="200" value="0">
+
+        <label class="range-label" style="font-size:11px">Master Position Y (Up / Down)</label>
+        <input id="masterPosYRange" type="range" min="-200" max="200" value="0">
       </div>
-    </div>
 
-    <!-- Background Slot Card -->
-    <div class="slot-card" style="margin-top:6px;width:100%">
-      <label>🖼️ Custom Stage Background</label>
-      <div class="slot-actions">
-        <button class="dark" onclick="triggerUpload('bg')">Load Background</button>
-        <button class="danger" onclick="clearSlot('bg')">Remove Background</button>
+      <!-- SECTION: AVATAR POSITION & SIZE -->
+      <div class="section-card">
+        <div class="section-title">📐 AVATAR POSITION & SIZE</div>
+        <label class="range-label" style="font-size:11px;margin-top:2px">Avatar Size (Scale)</label>
+        <input id="avatarScaleRange" type="range" min="20" max="250" value="100">
+
+        <label class="range-label" style="font-size:11px">Vertical Position (Up / Down)</label>
+        <input id="avatarPosYRange" type="range" min="-150" max="150" value="0">
       </div>
-    </div>
 
-    <div class="row" style="margin-top:8px">
-      <button class="danger" id="clearAllBtn" style="font-size:11px;padding:6px 10px">Clear All Saved Images & Background</button>
-    </div>
+      <!-- SECTION: FOREGROUND POSITION & SIZE -->
+      <div class="section-card">
+        <div class="section-title">🖼️ FOREGROUND POSITION & SIZE</div>
+        <label class="range-label" style="font-size:11px;margin-top:2px">Foreground Size (Scale)</label>
+        <input id="fgScaleRange" type="range" min="20" max="250" value="100">
 
-    <input id="fileInput" type="file" accept="image/*" hidden>
+        <label class="range-label" style="font-size:11px">Vertical Position (Up / Down)</label>
+        <input id="fgPosYRange" type="range" min="-150" max="150" value="0">
+      </div>
 
-    <div class="note">
-      Persistent storage enabled (IndexedDB). Optimized for mobile split-screen & foldables.
+      <!-- SECTION: MIC & BLINK SENSITIVITY -->
+      <div class="section-card">
+        <div class="section-title">🎙️ MICROPHONE & BLINK SETTINGS</div>
+        <label class="range-label" style="margin-top:2px">Microphone Sensitivity</label>
+        <input id="sensitivity" type="range" min="1" max="100" value="25">
+
+        <label class="range-label">Blink Frequency (Speed/Rate)</label>
+        <input id="blinkSpeed" type="range" min="1" max="100" value="50">
+      </div>
+
+      <!-- SECTION: AVATAR ACTIONS -->
+      <div class="section-card">
+        <div class="section-title">✨ AVATAR ACTIONS & ANIMATIONS</div>
+        <select id="actionSelect">
+          <option value="none">✨ No Active Action</option>
+          <option value="anim-regular-bounce">🟢 Regular Bounce</option>
+          <option value="anim-excited-bounce">🎉 Excited Bounce</option>
+          <option value="anim-sway">🔄 Side Sway</option>
+          <option value="anim-tilt">📐 Head Tilt</option>
+          <option value="anim-pulse">💓 Pulse Zoom</option>
+          <option value="anim-float">🎈 Floating Hover</option>
+        </select>
+
+        <label class="range-label" id="intensityLabel">Action Intensity</label>
+        <input id="actionIntensity" type="range" min="2" max="50" value="10">
+      </div>
+
+      <!-- SECTION: TIKTOK CHAT TTS -->
+      <div class="section-card">
+        <div class="section-title">💬 TIKTOK CHAT TEXT-TO-SPEECH</div>
+        <label class="range-label" style="margin-top:2px">TikTok Username</label>
+        <input id="tiktokUsernameInput" type="text" placeholder="e.g. yourusername (without @)" style="margin-bottom:8px">
+
+        <div class="row">
+          <button class="dark" id="ttsToggleBtn" style="flex:1">🔊 Chat TTS: OFF</button>
+          <button class="dark" id="testTtsBtn" style="flex:1">Test TTS Voice</button>
+        </div>
+        
+        <label class="range-label" style="font-size:11px">TTS Voice Speed (Rate)</label>
+        <input id="ttsSpeed" type="range" min="50" max="150" value="100">
+
+        <label class="range-label" style="font-size:11px">TTS Voice Volume</label>
+        <input id="ttsVolume" type="range" min="0" max="100" value="100">
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <button class="danger" id="clearAllBtn" style="font-size:11px;padding:6px 10px">Clear All Saved Images & Settings</button>
+      </div>
+
+      <div class="note">
+        Persistent storage enabled (IndexedDB). Optimized for mobile split-screen & foldables.
+      </div>
     </div>
   </div>
 </main>
 
+<input id="fileInput" type="file" accept="image/*" hidden>
+
 <script>
-// State architecture for 4 avatar frames + background
-const images = { slot1: null, slot2: null, slot3: null, slot4: null, bg: null };
+// State architecture for 4 avatar frames + background + foreground
+const images = { slot1: null, slot2: null, slot3: null, slot4: null, bg: null, fg: null };
 let activeUploadSlot = null;
 
 // Audio & Animation runtime states
@@ -210,11 +431,37 @@ let isBlinking = false;
 let blinkTimeout = null;
 let blinkMultiplier = 1.0;
 let currentActiveAction = 'none';
+let slidersLocked = false;
+
+// Stage Background Color State
+let stageBgColorVal = '#000000';
+
+// Master Stage Transform States
+let masterScaleVal = 1.0;
+let masterPosXVal = 0;
+let masterPosYVal = 0;
+
+// Avatar Transformation States
+let avatarScaleVal = 1.0;
+let avatarPosYVal = 0;
+
+// Foreground Transformation States
+let fgScaleVal = 1.0;
+let fgPosYVal = 0;
+
+// TikTok TTS States
+let ttsActive = false;
+let ttsRate = 1.0;
+let ttsVolumeLevel = 1.0;
+let ttsSocket = null;
 
 // DOM Elements
 const avatar=document.getElementById('avatar');
 const avatarContainer=document.getElementById('avatar-container');
+const stageContainer=document.getElementById('stageContainer');
+const stageWrapper=document.getElementById('stageWrapper');
 const stageBg=document.getElementById('stage-bg');
+const stageFg=document.getElementById('stage-fg');
 const placeholder=document.getElementById('placeholder');
 const bar=document.getElementById('bar');
 const status=document.getElementById('status');
@@ -222,17 +469,67 @@ const start=document.getElementById('start');
 const fileInput=document.getElementById('fileInput');
 const appMain=document.getElementById('appMain');
 const modeToggleBtn=document.getElementById('modeToggleBtn');
+const floatingNav=document.getElementById('floatingNav');
 const floatingToggle=document.getElementById('floatingToggle');
+const floatingMasterZoomToggle=document.getElementById('floatingMasterZoomToggle');
+const floatingTtsToggleBtn=document.getElementById('floatingTtsToggleBtn');
+const avatarMasterFlyout=document.getElementById('avatarMasterFlyout');
+const avatarTtsFlyout=document.getElementById('avatarTtsFlyout');
+
+// Color Picker DOM Elements
+const setupBgColorPicker = document.getElementById('setupBgColorPicker');
+const flyoutBgColorPicker = document.getElementById('flyoutBgColorPicker');
+
+// Master Transform DOM Elements
+const masterScaleRange = document.getElementById('masterScaleRange');
+const masterPosXRange = document.getElementById('masterPosXRange');
+const masterPosYRange = document.getElementById('masterPosYRange');
+const setupResetMasterBtn = document.getElementById('setupResetMasterBtn');
+
+// Flyout Master Transform DOM Elements
+const flyoutMasterScale = document.getElementById('flyoutMasterScale');
+const flyoutMasterPosX = document.getElementById('flyoutMasterPosX');
+const flyoutMasterPosY = document.getElementById('flyoutMasterPosY');
+const flyoutResetMasterBtn = document.getElementById('flyoutResetMasterBtn');
+const flyoutLockSlidersBtn = document.getElementById('flyoutLockSlidersBtn');
+
+// Flyout Avatar Sizing DOM Elements
+const flyoutAvatarScale = document.getElementById('flyoutAvatarScale');
+const flyoutAvatarPosY = document.getElementById('flyoutAvatarPosY');
+
+// Flyout Foreground Sizing DOM Elements
+const flyoutFgScale = document.getElementById('flyoutFgScale');
+const flyoutFgPosY = document.getElementById('flyoutFgPosY');
+
+// Transform DOM Elements
+const avatarScaleRange = document.getElementById('avatarScaleRange');
+const avatarPosYRange = document.getElementById('avatarPosYRange');
+const fgScaleRange = document.getElementById('fgScaleRange');
+const fgPosYRange = document.getElementById('fgPosYRange');
 
 // Dropdown & Intensity Controls
 const actionSelect = document.getElementById('actionSelect');
 const actionIntensity = document.getElementById('actionIntensity');
 const intensityLabel = document.getElementById('intensityLabel');
 
+// TTS DOM Elements
+const tiktokUsernameInput = document.getElementById('tiktokUsernameInput');
+const ttsToggleBtn = document.getElementById('ttsToggleBtn');
+const testTtsBtn = document.getElementById('testTtsBtn');
+const ttsSpeed = document.getElementById('ttsSpeed');
+const ttsVolume = document.getElementById('ttsVolume');
+
+// Flyout TTS DOM Elements
+const flyoutTiktokUsername = document.getElementById('flyoutTiktokUsername');
+const flyoutTtsToggleBtn = document.getElementById('flyoutTtsToggleBtn');
+const flyoutTestTtsBtn = document.getElementById('flyoutTestTtsBtn');
+const flyoutTtsSpeed = document.getElementById('flyoutTtsSpeed');
+const flyoutTtsVolume = document.getElementById('flyoutTtsVolume');
+
 // --- IndexedDB Persistence Implementation ---
 const DB_NAME = 'TalkingAvatarDB';
 const STORE_NAME = 'avatarImages';
-const DB_VERSION = 1;
+const DB_VERSION = 6;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -290,31 +587,383 @@ async function loadAllImagesFromDB() {
         }
       };
     }
+
+    // Load saved TikTok username
+    const userReq = store.get('tiktokUsername');
+    userReq.onsuccess = () => {
+      if (userReq.result) {
+        tiktokUsernameInput.value = userReq.result;
+        flyoutTiktokUsername.value = userReq.result;
+      }
+    };
+
+    // Load Stage Background Color
+    const bgColorReq = store.get('stageBgColor');
+    bgColorReq.onsuccess = () => {
+      if (bgColorReq.result) {
+        stageBgColorVal = bgColorReq.result;
+        setupBgColorPicker.value = stageBgColorVal;
+        flyoutBgColorPicker.value = stageBgColorVal;
+      }
+    };
+
+    // Load Master Stage settings
+    const mScaleReq = store.get('masterScale');
+    mScaleReq.onsuccess = () => {
+      if (mScaleReq.result !== undefined) {
+        masterScaleVal = mScaleReq.result;
+        masterScaleRange.value = masterScaleVal * 100;
+        flyoutMasterScale.value = masterScaleVal * 100;
+      }
+    };
+
+    const mPosXReq = store.get('masterPosX');
+    mPosXReq.onsuccess = () => {
+      if (mPosXReq.result !== undefined) {
+        masterPosXVal = mPosXReq.result;
+        masterPosXRange.value = masterPosXVal;
+        flyoutMasterPosX.value = masterPosXVal;
+      }
+    };
+
+    const mPosYReq = store.get('masterPosY');
+    mPosYReq.onsuccess = () => {
+      if (mPosYReq.result !== undefined) {
+        masterPosYVal = mPosYReq.result;
+        masterPosYRange.value = masterPosYVal;
+        flyoutMasterPosY.value = masterPosYVal;
+      }
+    };
+
+    // Load saved avatar scale & position
+    const scaleReq = store.get('avatarScale');
+    scaleReq.onsuccess = () => {
+      if (scaleReq.result !== undefined) {
+        avatarScaleVal = scaleReq.result;
+        avatarScaleRange.value = avatarScaleVal * 100;
+        flyoutAvatarScale.value = avatarScaleVal * 100;
+      }
+    };
+
+    const posReq = store.get('avatarPosY');
+    posReq.onsuccess = () => {
+      if (posReq.result !== undefined) {
+        avatarPosYVal = posReq.result;
+        avatarPosYRange.value = avatarPosYVal;
+        flyoutAvatarPosY.value = avatarPosYVal;
+      }
+    };
+
+    // Load saved foreground scale & position
+    const fgScaleReq = store.get('fgScale');
+    fgScaleReq.onsuccess = () => {
+      if (fgScaleReq.result !== undefined) {
+        fgScaleVal = fgScaleReq.result;
+        fgScaleRange.value = fgScaleVal * 100;
+        flyoutFgScale.value = fgScaleVal * 100;
+      }
+    };
+
+    const fgPosReq = store.get('fgPosY');
+    fgPosReq.onsuccess = () => {
+      if (fgPosReq.result !== undefined) {
+        fgPosYVal = fgPosReq.result;
+        fgPosYRange.value = fgPosYVal;
+        flyoutFgPosY.value = fgPosYVal;
+      }
+    };
+
     tx.oncomplete = () => {
+      updateStageBgColorStyles();
       updateAvatarDisplay();
       updateBackgroundDisplay();
+      updateForegroundDisplay();
+      updateMasterTransformStyles();
+      updateAvatarTransformStyles();
+      updateFgTransformStyles();
     };
   } catch (err) {
-    console.error('Error loading images from DB:', err);
+    console.error('Error loading data from DB:', err);
   }
 }
 
 async function clearAllImages() {
-  if (!confirm('Are you sure you want to clear all saved avatar images and background?')) return;
+  if (!confirm('Are you sure you want to clear all saved avatar images, backgrounds, foregrounds, and settings?')) return;
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).clear();
     tx.oncomplete = () => {
       Object.keys(images).forEach(k => images[k] = null);
+      tiktokUsernameInput.value = '';
+      flyoutTiktokUsername.value = '';
+      setStageBgColor('#000000');
+      resetMasterTransforms();
+      avatarScaleVal = 1.0;
+      avatarScaleRange.value = 100;
+      flyoutAvatarScale.value = 100;
+      avatarPosYVal = 0;
+      avatarPosYRange.value = 0;
+      flyoutAvatarPosY.value = 0;
+      fgScaleVal = 1.0;
+      fgScaleRange.value = 100;
+      flyoutFgScale.value = 100;
+      fgPosYVal = 0;
+      fgPosYRange.value = 0;
+      flyoutFgPosY.value = 0;
       updateAvatarDisplay();
       updateBackgroundDisplay();
-      alert('All saved avatar images and background have been cleared.');
+      updateForegroundDisplay();
+      updateAvatarTransformStyles();
+      updateFgTransformStyles();
+      alert('All saved settings and items have been cleared.');
     };
   } catch (err) {
     console.error('Error clearing DB:', err);
   }
 }
+
+// Sync username inputs
+tiktokUsernameInput.oninput = async (e) => {
+  const val = e.target.value.trim();
+  flyoutTiktokUsername.value = val;
+  saveUsernameToDB(val);
+};
+
+flyoutTiktokUsername.oninput = async (e) => {
+  const val = e.target.value.trim();
+  tiktokUsernameInput.value = val;
+  saveUsernameToDB(val);
+};
+
+async function saveUsernameToDB(val) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(val, 'tiktokUsername');
+  } catch (err) { console.error('Error saving username:', err); }
+}
+
+// --- Stage Background Color Engine ---
+function updateStageBgColorStyles() {
+  stageWrapper.style.setProperty('--stage-bg-color', stageBgColorVal);
+}
+
+async function saveStageBgColorToDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(stageBgColorVal, 'stageBgColor');
+  } catch (err) { console.error(err); }
+}
+
+function setStageBgColor(hex) {
+  stageBgColorVal = hex;
+  setupBgColorPicker.value = hex;
+  flyoutBgColorPicker.value = hex;
+  updateStageBgColorStyles();
+  saveStageBgColorToDB();
+}
+
+setupBgColorPicker.oninput = (e) => setStageBgColor(e.target.value);
+flyoutBgColorPicker.oninput = (e) => setStageBgColor(e.target.value);
+
+// Setup Palette Swatch Click Handlers
+document.querySelectorAll('#setupColorPalette .color-swatch, #flyoutColorPalette .color-swatch').forEach(swatch => {
+  swatch.onclick = (e) => {
+    const color = e.target.getAttribute('data-color');
+    setStageBgColor(color);
+  };
+});
+
+// --- Slider Lock Toggle Handler ---
+function toggleSliderLock() {
+  slidersLocked = !slidersLocked;
+  const allRanges = document.querySelectorAll('input[type=range]');
+  
+  allRanges.forEach(r => {
+    r.disabled = slidersLocked;
+  });
+
+  if (slidersLocked) {
+    flyoutLockSlidersBtn.textContent = '🔒 Locked';
+    flyoutLockSlidersBtn.classList.add('active-btn');
+  } else {
+    flyoutLockSlidersBtn.textContent = '🔓 Lock Sliders';
+    flyoutLockSlidersBtn.classList.remove('active-btn');
+  }
+}
+
+flyoutLockSlidersBtn.onclick = toggleSliderLock;
+
+// --- Master Stage Transform Handlers ---
+function updateMasterTransformStyles() {
+  stageContainer.style.setProperty('--master-scale', masterScaleVal);
+  stageContainer.style.setProperty('--master-pos-x', `${masterPosXVal}px`);
+  stageContainer.style.setProperty('--master-pos-y', `${masterPosYVal}px`);
+}
+
+async function saveMasterTransformToDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(masterScaleVal, 'masterScale');
+    store.put(masterPosXVal, 'masterPosX');
+    store.put(masterPosYVal, 'masterPosY');
+  } catch (err) { console.error(err); }
+}
+
+function resetMasterTransforms() {
+  masterScaleVal = 1.0;
+  masterScaleRange.value = 100;
+  flyoutMasterScale.value = 100;
+
+  masterPosXVal = 0;
+  masterPosXRange.value = 0;
+  flyoutMasterPosX.value = 0;
+
+  masterPosYVal = 0;
+  masterPosYRange.value = 0;
+  flyoutMasterPosY.value = 0;
+
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+}
+
+setupResetMasterBtn.onclick = resetMasterTransforms;
+flyoutResetMasterBtn.onclick = resetMasterTransforms;
+
+masterScaleRange.oninput = (e) => {
+  masterScaleVal = Number(e.target.value) / 100;
+  flyoutMasterScale.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+masterPosXRange.oninput = (e) => {
+  masterPosXVal = Number(e.target.value);
+  flyoutMasterPosX.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+masterPosYRange.oninput = (e) => {
+  masterPosYVal = Number(e.target.value);
+  flyoutMasterPosY.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+// Flyout Master Sliders synchronization
+flyoutMasterScale.oninput = (e) => {
+  masterScaleVal = Number(e.target.value) / 100;
+  masterScaleRange.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+flyoutMasterPosX.oninput = (e) => {
+  masterPosXVal = Number(e.target.value);
+  masterPosXRange.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+flyoutMasterPosY.oninput = (e) => {
+  masterPosYVal = Number(e.target.value);
+  masterPosYRange.value = e.target.value;
+  updateMasterTransformStyles();
+  saveMasterTransformToDB();
+};
+
+// --- Avatar Transformation Handlers ---
+function updateAvatarTransformStyles() {
+  avatarContainer.style.setProperty('--avatar-scale', avatarScaleVal);
+  avatarContainer.style.setProperty('--avatar-offset-y', `${avatarPosYVal}px`);
+}
+
+async function saveAvatarTransformToDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(avatarScaleVal, 'avatarScale');
+    store.put(avatarPosYVal, 'avatarPosY');
+  } catch (err) { console.error(err); }
+}
+
+avatarScaleRange.oninput = (e) => {
+  avatarScaleVal = Number(e.target.value) / 100;
+  flyoutAvatarScale.value = e.target.value;
+  updateAvatarTransformStyles();
+  saveAvatarTransformToDB();
+};
+
+flyoutAvatarScale.oninput = (e) => {
+  avatarScaleVal = Number(e.target.value) / 100;
+  avatarScaleRange.value = e.target.value;
+  updateAvatarTransformStyles();
+  saveAvatarTransformToDB();
+};
+
+avatarPosYRange.oninput = (e) => {
+  avatarPosYVal = Number(e.target.value);
+  flyoutAvatarPosY.value = e.target.value;
+  updateAvatarTransformStyles();
+  saveAvatarTransformToDB();
+};
+
+flyoutAvatarPosY.oninput = (e) => {
+  avatarPosYVal = Number(e.target.value);
+  avatarPosYRange.value = e.target.value;
+  updateAvatarTransformStyles();
+  saveAvatarTransformToDB();
+};
+
+// --- Foreground Transformation Handlers ---
+function updateFgTransformStyles() {
+  stageFg.style.setProperty('--fg-scale', fgScaleVal);
+  stageFg.style.setProperty('--fg-offset-y', `${fgPosYVal}px`);
+}
+
+async function saveFgTransformToDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(fgScaleVal, 'fgScale');
+    store.put(fgPosYVal, 'fgPosY');
+  } catch (err) { console.error(err); }
+}
+
+fgScaleRange.oninput = (e) => {
+  fgScaleVal = Number(e.target.value) / 100;
+  flyoutFgScale.value = e.target.value;
+  updateFgTransformStyles();
+  saveFgTransformToDB();
+};
+
+flyoutFgScale.oninput = (e) => {
+  fgScaleVal = Number(e.target.value) / 100;
+  fgScaleRange.value = e.target.value;
+  updateFgTransformStyles();
+  saveFgTransformToDB();
+};
+
+fgPosYRange.oninput = (e) => {
+  fgPosYVal = Number(e.target.value);
+  flyoutFgPosY.value = e.target.value;
+  updateFgTransformStyles();
+  saveFgTransformToDB();
+};
+
+flyoutFgPosY.oninput = (e) => {
+  fgPosYVal = Number(e.target.value);
+  fgPosYRange.value = e.target.value;
+  updateFgTransformStyles();
+  saveFgTransformToDB();
+};
 
 // --- Image Management Interface ---
 function triggerUpload(slotKey) {
@@ -332,6 +981,8 @@ fileInput.onchange = async (e) => {
   
   if (activeUploadSlot === 'bg') {
     updateBackgroundDisplay();
+  } else if (activeUploadSlot === 'fg') {
+    updateForegroundDisplay();
   } else {
     updateAvatarDisplay();
   }
@@ -342,12 +993,14 @@ async function clearSlot(slotKey) {
   images[slotKey] = null;
   if (slotKey === 'bg') {
     updateBackgroundDisplay();
+  } else if (slotKey === 'fg') {
+    updateForegroundDisplay();
   } else {
     updateAvatarDisplay();
   }
 }
 
-// --- Background Display Engine ---
+// --- Background & Foreground Display Engines ---
 function updateBackgroundDisplay() {
   if (images.bg) {
     stageBg.style.backgroundImage = `url('${images.bg}')`;
@@ -355,6 +1008,16 @@ function updateBackgroundDisplay() {
   } else {
     stageBg.style.backgroundImage = 'none';
     stageBg.style.display = 'none';
+  }
+}
+
+function updateForegroundDisplay() {
+  if (images.fg) {
+    stageFg.style.backgroundImage = `url('${images.fg}')`;
+    stageFg.style.display = 'block';
+  } else {
+    stageFg.style.backgroundImage = 'none';
+    stageFg.style.display = 'none';
   }
 }
 
@@ -398,16 +1061,13 @@ function scheduleBlink() {
 
 // --- Action Dropdown & Dynamic Slider Configuration ---
 function applyActionSettings(actionValue, sliderVal) {
-  // Remove all current animation classes
   const animClasses = ['anim-regular-bounce', 'anim-excited-bounce', 'anim-sway', 'anim-tilt', 'anim-pulse', 'anim-float'];
   avatarContainer.classList.remove(...animClasses);
 
   if (actionValue === 'none') return;
 
-  // Add the chosen animation class
   avatarContainer.classList.add(actionValue);
 
-  // Configure intensity limits and CSS variables dynamically based on action type
   if (actionValue === 'anim-regular-bounce') {
     intensityLabel.textContent = 'Regular Bounce Height';
     avatarContainer.style.setProperty('--anim-intensity', `-${sliderVal}px`);
@@ -432,7 +1092,6 @@ function applyActionSettings(actionValue, sliderVal) {
 actionSelect.onchange = e => {
   currentActiveAction = e.target.value;
   
-  // Set sensible default slider values when switching actions
   if (currentActiveAction === 'anim-regular-bounce') { actionIntensity.min = 2; actionIntensity.max = 25; actionIntensity.value = 10; }
   else if (currentActiveAction === 'anim-excited-bounce') { actionIntensity.min = 15; actionIntensity.max = 50; actionIntensity.value = 30; }
   else if (currentActiveAction === 'anim-sway') { actionIntensity.min = 2; actionIntensity.max = 15; actionIntensity.value = 6; }
@@ -447,15 +1106,121 @@ actionIntensity.oninput = e => {
   applyActionSettings(currentActiveAction, Number(e.target.value));
 };
 
+// --- Text-to-Speech Engine ---
+function speakComment(text) {
+  if (!ttsActive || !('speechSynthesis' in window)) return;
+  
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = ttsRate;
+  utterance.volume = ttsVolumeLevel;
+  utterance.pitch = 1.0;
+  
+  window.speechSynthesis.speak(utterance);
+}
+
+ttsSpeed.oninput = e => {
+  const v = e.target.value;
+  ttsRate = Number(v) / 100;
+  flyoutTtsSpeed.value = v;
+};
+
+flyoutTtsSpeed.oninput = e => {
+  const v = e.target.value;
+  ttsRate = Number(v) / 100;
+  ttsSpeed.value = v;
+};
+
+ttsVolume.oninput = e => {
+  const v = e.target.value;
+  ttsVolumeLevel = Number(v) / 100;
+  flyoutTtsVolume.value = v;
+};
+
+flyoutTtsVolume.oninput = e => {
+  const v = e.target.value;
+  ttsVolumeLevel = Number(v) / 100;
+  ttsVolume.value = v;
+};
+
+testTtsBtn.onclick = () => {
+  speakComment("Hello everyone, welcome to the stream!");
+};
+
+flyoutTestTtsBtn.onclick = () => {
+  speakComment("Hello everyone, welcome to the stream!");
+};
+
+function toggleTts() {
+  const username = tiktokUsernameInput.value.trim().replace(/^@/, '');
+  if (!ttsActive) {
+    if (!username) {
+      alert('Please enter your TikTok username first.');
+      return;
+    }
+    ttsActive = true;
+    ttsToggleBtn.textContent = '🔊 Chat TTS: ON';
+    ttsToggleBtn.classList.add('active-btn');
+    flyoutTtsToggleBtn.textContent = '🔊 ON';
+    flyoutTtsToggleBtn.classList.add('active-btn');
+    
+    connectTikTokChat(username);
+  } else {
+    ttsActive = false;
+    ttsToggleBtn.textContent = '🔊 Chat TTS: OFF';
+    ttsToggleBtn.classList.remove('active-btn');
+    flyoutTtsToggleBtn.textContent = '🔊 OFF';
+    flyoutTtsToggleBtn.classList.remove('active-btn');
+    if (ttsSocket) {
+      ttsSocket.close();
+      ttsSocket = null;
+    }
+  }
+}
+
+ttsToggleBtn.onclick = toggleTts;
+flyoutTtsToggleBtn.onclick = toggleTts;
+
+function connectTikTokChat(username) {
+  const wsUrl = `wss://api.tik.tools?uniqueId=${encodeURIComponent(username)}`;
+  
+  try {
+    ttsSocket = new WebSocket(wsUrl);
+    
+    ttsSocket.onmessage = (event) => {
+      try {
+        const pkt = JSON.parse(event.data);
+        if (pkt.event === 'chat' && pkt.data) {
+          const msg = pkt.data.comment || '';
+          if (msg) {
+            speakComment(msg);
+          }
+        }
+      } catch (err) { console.error(err); }
+    };
+
+    ttsSocket.onclose = () => {
+      if (ttsActive) {
+        setTimeout(() => {
+          if (ttsActive) connectTikTokChat(username);
+        }, 5000);
+      }
+    };
+  } catch (e) { console.error(e); }
+}
+
 // --- UI Layout Modes (Avatar-Only vs Setup Mode) ---
 function toggleAvatarMode(enabled) {
   if (enabled) {
     document.body.classList.add('hidden-mode');
-    floatingToggle.style.display = 'block';
+    floatingNav.style.display = 'flex';
     modeToggleBtn.textContent = '⚙️ Setup Mode';
   } else {
     document.body.classList.remove('hidden-mode');
-    floatingToggle.style.display = 'none';
+    floatingNav.style.display = 'none';
+    avatarMasterFlyout.classList.remove('show');
+    avatarTtsFlyout.classList.remove('show');
     modeToggleBtn.textContent = '📱 Avatar Mode';
   }
 }
@@ -467,6 +1232,16 @@ modeToggleBtn.onclick = () => {
 
 floatingToggle.onclick = () => {
   toggleAvatarMode(false);
+};
+
+floatingMasterZoomToggle.onclick = () => {
+  avatarTtsFlyout.classList.remove('show');
+  avatarMasterFlyout.classList.toggle('show');
+};
+
+floatingTtsToggleBtn.onclick = () => {
+  avatarMasterFlyout.classList.remove('show');
+  avatarTtsFlyout.classList.toggle('show');
 };
 
 // --- Sliders Configuration ---
@@ -553,7 +1328,6 @@ start.onclick = () => running ? stopMic() : startMic();
 
 window.addEventListener('DOMContentLoaded', () => {
   loadAllImagesFromDB();
-  // Initialize default active action settings
   applyActionSettings(currentActiveAction, Number(actionIntensity.value));
 });
 </script>
