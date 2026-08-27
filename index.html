@@ -376,6 +376,11 @@
         <span style="font-size:11px;color:#888;font-weight:bold">💬 TTS, MIC & MOTIONS</span>
       </div>
       <div class="flyout-body">
+        <label class="range-label" style="font-size:10px;margin-top:2px">Microphone Input Device</label>
+        <select id="flyoutMicSelect" style="font-size:11px;padding:6px;margin-bottom:6px">
+          <option value="">Default Microphone</option>
+        </select>
+
         <label class="range-label" style="font-size:10px;margin-top:2px">Microphone (Mouth Movement)</label>
         <button class="primary" id="flyoutMicToggleBtn" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px">🎤 MIC: OFF</button>
 
@@ -554,6 +559,10 @@
 
       <div class="section-card">
         <div class="section-title">🎙️ MICROPHONE & BLINK SETTINGS</div>
+        <label class="range-label" style="margin-top:2px">Microphone Input Device</label>
+        <select id="micSelect" style="margin-bottom:6px">
+          <option value="">Default Microphone</option>
+        </select>
         <label class="range-label" style="margin-top:2px">Microphone Sensitivity</label>
         <input id="sensitivity" type="range" min="1" max="100" value="25">
         <label class="range-label">Blink Frequency (Speed/Rate)</label>
@@ -657,6 +666,9 @@ const setupGridToggleBtn = document.getElementById('setupGridToggleBtn');
 const flyoutGridToggleBtn = document.getElementById('flyoutGridToggleBtn');
 const flyoutResetMasterBtn = document.getElementById('flyoutResetMasterBtn');
 
+const micSelect = document.getElementById('micSelect');
+const flyoutMicSelect = document.getElementById('flyoutMicSelect');
+
 // Sync setup and flyout inputs
 const masterScaleRange = document.getElementById('masterScaleRange');
 const flyoutMasterScaleRange = document.getElementById('flyoutMasterScaleRange');
@@ -725,7 +737,6 @@ function openDB() {
   });
 }
 
-// Added back missing IndexedDB helper functions
 async function saveImageToDB(slotKey, file) {
   try {
     const db = await openDB();
@@ -1215,14 +1226,80 @@ floatingToggle.onclick = () => toggleAvatarMode(false);
 floatingMasterZoomToggle.onclick = () => { avatarTtsFlyout.classList.remove('show'); avatarMasterFlyout.classList.toggle('show'); };
 floatingTtsToggleBtn.onclick = () => { avatarMasterFlyout.classList.remove('show'); avatarTtsFlyout.classList.toggle('show'); };
 
+async function populateMicrophones() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioInputs = devices.filter(d => d.kind === 'audioinput');
+    
+    micSelect.innerHTML = '<option value="">Default Microphone</option>';
+    flyoutMicSelect.innerHTML = '<option value="">Default Microphone</option>';
+
+    audioInputs.forEach(device => {
+      const opt1 = document.createElement('option');
+      opt1.value = device.deviceId;
+      opt1.textContent = device.label || `Microphone ${micSelect.options.length}`;
+      micSelect.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = device.deviceId;
+      opt2.textContent = opt1.textContent;
+      flyoutMicSelect.appendChild(opt2);
+    });
+
+    const savedId = localStorage.getItem('selectedMicId');
+    if (savedId) {
+      micSelect.value = savedId;
+      flyoutMicSelect.value = savedId;
+    }
+  } catch (e) {
+    console.warn('Microphone enumeration unavailable:', e);
+  }
+}
+
+micSelect.onchange = (e) => {
+  flyoutMicSelect.value = e.target.value;
+  localStorage.setItem('selectedMicId', e.target.value);
+  if (running) { stopMic(); startMic(); }
+};
+
+flyoutMicSelect.onchange = (e) => {
+  micSelect.value = e.target.value;
+  localStorage.setItem('selectedMicId', e.target.value);
+  if (running) { stopMic(); startMic(); }
+};
+
 async function startMic() {
   if (!images.slot1 && !images.slot2 && !images.slot3 && !images.slot4) {
     alert('Please load at least one avatar image frame first.');
     return;
   }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const selectedDeviceId = micSelect.value;
+    const constraints = {
+      audio: {
+        deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1
+      },
+      video: false
+    };
+
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // Explicitly enforce playback routing to prevent device capture bottlenecks on mobile/headsets
+    const dummyAudio = new Audio();
+    dummyAudio.srcObject = stream;
+    dummyAudio.volume = 0;
+    try { await dummyAudio.play(); } catch(e) {}
+
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
@@ -1276,6 +1353,7 @@ document.getElementById('clearAllBtn').onclick = clearAllImages;
 
 window.addEventListener('DOMContentLoaded', () => {
   loadAllImagesFromDB();
+  populateMicrophones();
   applyActionSettings(currentActiveAction, Number(actionIntensity.value));
   setTimeout(updateStageScaleFit, 50);
 });
