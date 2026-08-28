@@ -384,6 +384,9 @@
         <label class="range-label" style="font-size:10px;margin-top:2px">Microphone (Mouth Movement & Audio Output)</label>
         <button class="primary" id="flyoutMicToggleBtn" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px">🎤 MIC: OFF</button>
 
+        <label class="range-label" style="font-size:10px;margin-top:2px">Microphone Passthrough Volume</label>
+        <input id="flyoutMicVolume" type="range" min="0" max="100" value="100" style="margin-bottom:6px">
+
         <label class="range-label" style="font-size:10px;margin-top:2px">TikTok Username</label>
         <input id="flyoutTiktokUsername" type="text" placeholder="username (no @)" style="font-size:11px;padding:6px;margin-bottom:6px">
         
@@ -572,6 +575,8 @@
         <select id="micSelect" style="margin-bottom:6px">
           <option value="">Default Microphone</option>
         </select>
+        <label class="range-label" style="margin-top:2px">Microphone Passthrough Volume</label>
+        <input id="micVolume" type="range" min="0" max="100" value="100" style="margin-bottom:6px">
         <label class="range-label" style="margin-top:2px">Microphone Sensitivity</label>
         <input id="sensitivity" type="range" min="1" max="100" value="25">
         <label class="range-label">Blink Frequency (Speed/Rate)</label>
@@ -632,6 +637,8 @@ let activeUploadSlot = null;
 
 let audioContext=null, analyser=null, data=null, stream=null, running=false;
 let microphoneNode = null;
+let micGainNode = null;
+let micVolumeLevel = 1.0;
 let threshold=.035;
 let isTalking = false;
 let isBlinking = false;
@@ -685,6 +692,8 @@ const flyoutResetMasterBtn = document.getElementById('flyoutResetMasterBtn');
 
 const micSelect = document.getElementById('micSelect');
 const flyoutMicSelect = document.getElementById('flyoutMicSelect');
+const micVolume = document.getElementById('micVolume');
+const flyoutMicVolume = document.getElementById('flyoutMicVolume');
 const ttsVoiceSelect = document.getElementById('ttsVoiceSelect');
 const flyoutTtsVoiceSelect = document.getElementById('flyoutTtsVoiceSelect');
 
@@ -900,7 +909,19 @@ flyoutTiktokUsername.oninput = (e) => { tiktokUsernameInput.value = e.target.val
 ttsVoiceSelect.onchange = (e) => { flyoutTtsVoiceSelect.value = e.target.value; };
 flyoutTtsVoiceSelect.onchange = (e) => { ttsVoiceSelect.value = e.target.value; };
 
-// Sync Volume Sliders
+// Sync Mic Volume Sliders
+micVolume.oninput = (e) => {
+  micVolumeLevel = Number(e.target.value) / 100;
+  flyoutMicVolume.value = e.target.value;
+  if (micGainNode) micGainNode.gain.value = micVolumeLevel;
+};
+flyoutMicVolume.oninput = (e) => {
+  micVolumeLevel = Number(e.target.value) / 100;
+  micVolume.value = e.target.value;
+  if (micGainNode) micGainNode.gain.value = micVolumeLevel;
+};
+
+// Sync TTS Volume Sliders
 ttsVolume.oninput = (e) => {
   ttsVolumeLevel = Number(e.target.value) / 100;
   flyoutTtsVolume.value = e.target.value;
@@ -1367,9 +1388,13 @@ async function startMic() {
     analyser.fftSize = 512;
     source.connect(analyser);
     
-    // Connect microphone directly to audioContext.destination to project voice audibly through the app
+    // Create GainNode for volume adjustment of audio passthrough
+    micGainNode = audioContext.createGain();
+    micGainNode.gain.value = micVolumeLevel;
+
     microphoneNode = source;
-    microphoneNode.connect(audioContext.destination);
+    microphoneNode.connect(micGainNode);
+    micGainNode.connect(audioContext.destination);
 
     data = new Float32Array(analyser.fftSize);
 
@@ -1402,8 +1427,12 @@ function loop() {
 function stopMic() {
   running = false;
   if (blinkTimeout) clearTimeout(blinkTimeout);
+  if (micGainNode) {
+    try { micGainNode.disconnect(); } catch(e){}
+    micGainNode = null;
+  }
   if (microphoneNode && audioContext) {
-    try { microphoneNode.disconnect(audioContext.destination); } catch(e){}
+    try { microphoneNode.disconnect(); } catch(e){}
   }
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (audioContext) audioContext.close();
