@@ -519,7 +519,7 @@
       <!-- MASTER RESIZE & POSITION -->
       <div class="section-card">
         <div class="section-title">
-          <span>🗺️ MASTER RESIZE & POSITION (ALL LAYERS)</span>
+          <span>MAP MASTER RESIZE & POSITION (ALL LAYERS)</span>
           <button class="lock-btn locked" id="lockMasterBtn" onclick="toggleLock('master')">🔒 Locked</button>
         </div>
         <label class="range-label" style="font-size:11px;margin-top:2px">Master Scale (Resize All)</label>
@@ -1213,6 +1213,7 @@ function loadVoices() {
   synthVoices = window.speechSynthesis.getVoices();
   
   const populateSelect = (sel) => {
+    const curVal = sel.value;
     sel.innerHTML = '<option value="">Default System Voice</option>';
     synthVoices.forEach((voice, index) => {
       const option = document.createElement('option');
@@ -1220,6 +1221,7 @@ function loadVoices() {
       option.textContent = `${voice.name} (${voice.lang})`;
       sel.appendChild(option);
     });
+    if (curVal !== undefined && curVal !== "") sel.value = curVal;
   };
 
   populateSelect(ttsVoiceSelect);
@@ -1231,13 +1233,14 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-function speakComment(text) {
-  if (!ttsActive && !event) return;
+function speakComment(text, forceSpeak = false) {
+  if (!ttsActive && !forceSpeak) return;
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
+
   const utterance = new SpeechSynthesisUtterance(text);
   
-  const selectedVoiceIndex = ttsVoiceSelect.value;
+  const selectedVoiceIndex = ttsVoiceSelect.value !== "" ? ttsVoiceSelect.value : flyoutTtsVoiceSelect.value;
   if (selectedVoiceIndex !== "" && synthVoices[selectedVoiceIndex]) {
     utterance.voice = synthVoices[selectedVoiceIndex];
   }
@@ -1245,12 +1248,26 @@ function speakComment(text) {
   utterance.rate = ttsRate; 
   utterance.volume = ttsVolumeLevel; 
   utterance.pitch = 1.0;
+
+  utterance.onstart = () => {
+    isTalking = true;
+    updateAvatarDisplay();
+  };
+  utterance.onend = () => {
+    isTalking = false;
+    updateAvatarDisplay();
+  };
+  utterance.onerror = () => {
+    isTalking = false;
+    updateAvatarDisplay();
+  };
+
   window.speechSynthesis.speak(utterance);
 }
 
 ttsSpeed.oninput = e => { ttsRate = Number(e.target.value) / 100; };
-testTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!");
-flyoutTestTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!");
+testTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!", true);
+flyoutTestTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!", true);
 
 function toggleTts() {
   const username = tiktokUsernameInput.value.trim().replace(/^@/, '');
