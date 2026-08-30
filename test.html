@@ -6,7 +6,7 @@
 <title>Talking Avatar</title>
 <style>
   *{box-sizing:border-box}
-  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  body{margin:0;background:#151515;color:#fff;font-family:system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
   
   main{max-width:520px;width:100%;margin:0 auto;padding:12px 14px 0;display:flex;flex-direction:column;height:100%}
   
@@ -25,20 +25,6 @@
     transform-origin: center center;
     flex-shrink:0;
   }
-
-  /* Invisible/Visible Grid overlay for absolute spatial tracking */
-  .stage-grid{
-    position:absolute;
-    inset:0;
-    background-image: 
-      linear-gradient(to right, rgba(255,255,255,0.07) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255,255,255,0.07) 1px, transparent 1px);
-    background-size: 50px 50px;
-    z-index: 5;
-    pointer-events: none;
-    display: none;
-  }
-  .show-grid .stage-grid{display:block}
 
   /* Absolute layers pinned to the 600x600 canvas */
   #stage-bg{
@@ -153,9 +139,9 @@
   #controlsPanel{display:flex;flex-direction:column;gap:6px}
   
   .hidden-mode #scrollableControls{display:none}
-  .hidden-mode main{max-width:100%;padding:0;height:100vh}
+  .hidden-mode main{max-width:100%;padding:0;height:100vh;height:100dvh}
   .hidden-mode .top-bar, .hidden-mode h1, .hidden-mode p.subtitle{display:none}
-  .hidden-mode .stage-wrapper{height:100vh;max-height:100vh;margin:0;border-radius:0}
+  .hidden-mode .stage-wrapper{height:100vh;height:100dvh;max-height:100dvh;margin:0;border-radius:0}
   
   /* Horizontal Floating Nav & Circular Toggle Button */
   .floating-nav{
@@ -165,7 +151,7 @@
     display:flex;
     align-items:center;
     gap:6px;
-    z-index:10;
+    z-index:20;
   }
   .floating-menu-items {
     display: flex;
@@ -175,45 +161,189 @@
   }
   .hidden-menu .floating-menu-items {display:none;}
   
-  .floating-btn{background:rgba(0,0,0,0.7);color:#fff;padding:8px 12px;border-radius:10px;font-size:13px;cursor:pointer;border:1px solid #444;font-weight:700;backdrop-filter:blur(4px);white-space:nowrap}
+  .floating-btn{
+    background:#777777;
+    color:#ffffff;
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:13px;
+    cursor:pointer;
+    border:1px solid rgba(255,255,255,0.6);
+    font-weight:700;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+    white-space:nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .floating-btn:hover {
+    background: #888888;
+  }
   
   .floating-menu-toggle {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(0,0,0,0.85);
-    border-color: #666;
+    background: #777777;
+    border-color: rgba(255,255,255,0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     font-size: 16px;
+    color: #ffffff;
   }
   
-  /* Flyout panels positioned strictly underneath the buttons row so tabs aren't covered */
+  /* Fully Transparent Flyout panels with crisp white edge outlines */
   .flyout-panel{
     position:absolute;
-    top:60px;
+    top:56px;
     right:12px;
-    background:rgba(20,20,20,0.96);
-    border:1px solid #444;
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.4);
     border-radius:12px;
-    width:320px;
-    max-height:420px;
+    width:min(320px, calc(100vw - 24px));
+    max-height:calc(100dvh - 75px);
+    max-height:calc(100vh - 75px);
     display:flex;
     flex-direction:column;
-    z-index:10;
+    z-index:15;
     display:none;
-    backdrop-filter:blur(6px);
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
     text-align:left;
     pointer-events:auto;
+    overflow:hidden;
+    box-shadow:none;
   }
   .flyout-panel.show{display:flex}
 
-  .flyout-header{position:sticky;top:0;background:rgba(20,20,20,0.98);padding:10px 12px 6px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;z-index:5;border-top-left-radius:12px;border-top-right-radius:12px}
-  .flyout-body{padding:8px 12px 12px;overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:#666 #141414;-webkit-overflow-scrolling:touch;touch-action:pan-y}
-  .flyout-body::-webkit-scrollbar{width:8px}
-  .flyout-body::-webkit-scrollbar-thumb{background:#555;border-radius:4px}
+  .flyout-header{
+    position:sticky;
+    top:0;
+    background:transparent;
+    padding:10px 12px 6px;
+    border-bottom:1px solid rgba(255,255,255,0.35);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    z-index:5;
+    border-top-left-radius:12px;
+    border-top-right-radius:12px;
+  }
+  
+  .flyout-body{
+    padding:8px 12px 14px;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    flex:1;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,0.6) transparent;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+  }
+  .flyout-body::-webkit-scrollbar{width:6px}
+  .flyout-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.4);border-radius:4px}
+
+  /* Clear inputs, cards, and bright, readable white labels */
+  .flyout-panel .section-card{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.3);
+  }
+  .flyout-panel select, .flyout-panel input[type=text]{
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.4);
+    color:#fff;
+    font-weight:bold;
+    text-shadow: 0 1px 3px #000, 0 0 2px #000;
+  }
+
+  /* Avatar Mode Flyout Buttons: Light Gray background and crisp white text */
+  .flyout-panel button,
+  .flyout-panel button.dark,
+  .flyout-panel button.primary {
+    background: #777777;
+    border: 1px solid rgba(255,255,255,0.6);
+    color: #ffffff;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  }
+  .flyout-panel button:hover {
+    background: #888888;
+  }
+  .flyout-panel button.active-btn {
+    background: #63df83 !important;
+    color: #111111 !important;
+    text-shadow: none;
+    border-color: #ffffff;
+  }
+
+  .flyout-panel .lock-btn{
+    background:#777777;
+    border-color:rgba(255,255,255,0.6);
+    color:#ffffff;
+  }
+  .flyout-panel .lock-btn.locked{
+    background:#5a2323;
+    border-color:#ff9999;
+    color:#ff9999;
+  }
+
+  /* Make all text in Avatar Mode Flyout bright white and crisp */
+  .flyout-panel span, 
+  .flyout-panel label, 
+  .flyout-panel .section-title,
+  .flyout-panel .range-label {
+    color: #ffffff !important;
+    font-weight: 700;
+    text-shadow: 0 1px 3px #000, 0 0 4px #000, 0 0 8px #000;
+  }
+
+  /* Universal Custom Sliders: Thicker white outline borders and solid white knobs */
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    height: 12px;
+    outline: none;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  input[type=range]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(255,255,255,0.4);
+  }
+  
+  /* Solid white slider knobs with high-contrast outlines */
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #ffffff;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #ffffff;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.7);
+  }
+  input[type=range]::-moz-range-track {
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    height: 12px;
+  }
 
   button,input,select{font:inherit}
   .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0}
@@ -279,7 +409,6 @@
   <div class="stage-wrapper" id="stageWrapper">
     <div class="floating-nav hidden-menu" id="floatingNav" style="display:none">
       <div class="floating-menu-items" id="floatingMenuItems">
-        <div class="floating-btn" id="floatingGridToggle">📏 Grid</div>
         <div class="floating-btn" id="floatingMasterZoomToggle">🗺️ Layout</div>
         <div class="floating-btn" id="floatingTtsToggleBtn">💬 TTS & Motions</div>
         <div class="floating-btn" id="floatingToggle">⚙️ Setup</div>
@@ -290,15 +419,12 @@
     <!-- AVATAR MODE MASTER & LAYER FLYOUT PANEL -->
     <div class="flyout-panel" id="avatarMasterFlyout">
       <div class="flyout-header">
-        <span style="font-size:11px;color:#888;font-weight:bold">🗺️ COMPOSITION & LAYER CONTROLS</span>
-        <div style="display:flex;gap:4px">
-          <button class="dark" id="flyoutGridToggleBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">📏 Grid: OFF</button>
-          <button class="dark" id="flyoutResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset All</button>
-        </div>
+        <span style="font-size:11px;color:#fff;font-weight:bold">🗺️ COMPOSITION & LAYERS</span>
+        <button class="dark" id="flyoutResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset All</button>
       </div>
       
       <div class="flyout-body">
-        <span style="font-size:11px;color:#888;font-weight:bold">🎨 STAGE BACKGROUND COLOR</span>
+        <span style="font-size:11px;color:#fff;font-weight:bold">🎨 STAGE BACKGROUND COLOR</span>
         <div class="color-palette" id="flyoutColorPalette">
           <div class="color-swatch" style="background:#000000" data-color="#000000" title="Pitch Black"></div>
           <div class="color-swatch" style="background:#111111" data-color="#111111" title="Dark Gray"></div>
@@ -309,7 +435,7 @@
         </div>
         <div class="color-picker-row" style="margin-bottom:8px">
           <input type="color" id="flyoutBgColorPicker" value="#000000">
-          <span style="font-size:11px;color:#bbb">Custom Background Color</span>
+          <span style="font-size:11px;color:#fff">Custom Background Color</span>
         </div>
 
         <!-- Master Resizer in Avatar Mode -->
@@ -373,7 +499,7 @@
     <!-- TTS & MOTIONS FLYOUT PANEL -->
     <div class="flyout-panel" id="avatarTtsFlyout">
       <div class="flyout-header">
-        <span style="font-size:11px;color:#888;font-weight:bold">💬 TTS, MIC & MOTIONS</span>
+        <span style="font-size:11px;color:#fff;font-weight:bold">💬 TTS, MIC & MOTIONS</span>
       </div>
       <div class="flyout-body">
         <label class="range-label" style="font-size:10px;margin-top:2px">Microphone Input Device</label>
@@ -381,8 +507,17 @@
           <option value="">Default Microphone</option>
         </select>
 
-        <label class="range-label" style="font-size:10px;margin-top:2px">Microphone (Mouth Movement)</label>
-        <button class="primary" id="flyoutMicToggleBtn" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px">🎤 MIC: OFF</button>
+        <label class="range-label" style="font-size:10px;margin-top:2px">Microphone Input (Mouth Movement)</label>
+        <button class="primary" id="flyoutMicToggleBtn" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px">🎤 MIC INPUT: OFF</button>
+
+        <label class="range-label" style="font-size:10px;margin-top:2px">Speaker Output (Passthrough)</label>
+        <button class="dark" id="flyoutPassthroughToggleBtn" style="width:100%;padding:8px;font-size:12px;margin-bottom:6px">🔊 PASSTHROUGH: OFF</button>
+
+        <label class="range-label" style="font-size:10px;margin-top:2px">Microphone Passthrough Volume</label>
+        <input id="flyoutMicVolume" type="range" min="0" max="100" value="100" style="margin-bottom:6px">
+
+        <label class="range-label" style="font-size:10px;margin-top:2px">Passthrough Noise Suppression (Noise Gate)</label>
+        <input id="flyoutNoiseGate" type="range" min="0" max="100" value="10" style="margin-bottom:6px">
 
         <label class="range-label" style="font-size:10px;margin-top:2px">TikTok Username</label>
         <input id="flyoutTiktokUsername" type="text" placeholder="username (no @)" style="font-size:11px;padding:6px;margin-bottom:6px">
@@ -414,7 +549,7 @@
           <label class="range-label" id="flyoutIntensityLabel" style="font-size:10px">Action Intensity</label>
           <input id="flyoutActionIntensity" type="range" min="2" max="50" value="10">
           
-          <label class="range-label" style="font-size:10px">Mic Sensitivity</label>
+          <label class="range-label" style="font-size:10px">Mic Sensitivity (Mouth)</label>
           <input id="flyoutSensitivity" type="range" min="1" max="100" value="25">
           <label class="range-label" style="font-size:10px">Blink Frequency</label>
           <input id="flyoutBlinkSpeed" type="range" min="1" max="100" value="50">
@@ -423,7 +558,6 @@
     </div>
 
     <div class="stage" id="stageContainer">
-      <div class="stage-grid"></div>
       <div id="stage-bg"></div>
       <div id="stage-fg"></div>
       <div id="avatar-container">
@@ -437,7 +571,7 @@
 
   <div id="scrollableControls">
     <div id="controlsPanel">
-      <button class="primary" id="start" style="width:100%;padding:12px;font-size:15px;margin-bottom:2px">START MICROPHONE</button>
+      <button class="primary" id="start" style="width:100%;padding:12px;font-size:15px;margin-bottom:2px">START MICROPHONE INPUT (MOUTH TRACKING)</button>
       <div class="meter"><div id="bar"></div></div>
       <div id="status">Stopped</div>
 
@@ -493,11 +627,8 @@
 
       <div class="section-card">
         <div class="section-title">
-          <span>🎨 STAGE BACKGROUND COLOR & GRID</span>
-          <div style="display:flex;gap:4px">
-            <button class="dark" id="setupGridToggleBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">📏 Grid: OFF</button>
-            <button class="dark" id="setupResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset</button>
-          </div>
+          <span>🎨 STAGE BACKGROUND COLOR</span>
+          <button class="dark" id="setupResetMasterBtn" style="padding:2px 6px;font-size:10px;border-radius:6px">Reset</button>
         </div>
         <div class="color-palette" id="setupColorPalette">
           <div class="color-swatch" style="background:#000000" data-color="#000000" title="Pitch Black"></div>
@@ -516,7 +647,7 @@
       <!-- MASTER RESIZE & POSITION -->
       <div class="section-card">
         <div class="section-title">
-          <span>🗺️ MASTER RESIZE & POSITION (ALL LAYERS)</span>
+          <span>MAP MASTER RESIZE & POSITION (ALL LAYERS)</span>
           <button class="lock-btn locked" id="lockMasterBtn" onclick="toggleLock('master')">🔒 Locked</button>
         </div>
         <label class="range-label" style="font-size:11px;margin-top:2px">Master Scale (Resize All)</label>
@@ -567,12 +698,22 @@
       </div>
 
       <div class="section-card">
-        <div class="section-title">🎙️ MICROPHONE & BLINK SETTINGS</div>
+        <div class="section-title">🎙️ MICROPHONE, PASSTHROUGH & BLINK SETTINGS</div>
         <label class="range-label" style="margin-top:2px">Microphone Input Device</label>
         <select id="micSelect" style="margin-bottom:6px">
           <option value="">Default Microphone</option>
         </select>
-        <label class="range-label" style="margin-top:2px">Microphone Sensitivity</label>
+        
+        <label class="range-label" style="margin-top:2px">Audio Output (Stream/Speaker Passthrough)</label>
+        <button class="dark" id="passthroughToggleBtn" style="width:100%;margin-bottom:6px">🔊 AUDIO PASSTHROUGH: OFF</button>
+        
+        <label class="range-label" style="margin-top:2px">Microphone Passthrough Volume</label>
+        <input id="micVolume" type="range" min="0" max="100" value="100" style="margin-bottom:6px">
+
+        <label class="range-label" style="margin-top:2px">Passthrough Noise Suppression (Noise Gate)</label>
+        <input id="noiseGateRange" type="range" min="0" max="100" value="10" style="margin-bottom:6px">
+
+        <label class="range-label" style="margin-top:2px">Microphone Sensitivity (Mouth)</label>
         <input id="sensitivity" type="range" min="1" max="100" value="25">
         <label class="range-label">Blink Frequency (Speed/Rate)</label>
         <input id="blinkSpeed" type="range" min="1" max="100" value="50">
@@ -618,7 +759,7 @@
       </div>
 
       <div class="note">
-        Master composition and individual lockable layers enabled across both setup and avatar viewing modes.
+        Mic mouth movement tracking and audio passthrough can be toggled independently with noise gate control.
       </div>
     </div>
   </div>
@@ -631,13 +772,19 @@ const images = { slot1: null, slot2: null, slot3: null, slot4: null, bg: null, f
 let activeUploadSlot = null;
 
 let audioContext=null, analyser=null, data=null, stream=null, running=false;
+let microphoneNode = null;
+let micGainNode = null;
+let highpassNode = null;
+let lowpassNode = null;
+let micVolumeLevel = 1.0;
+let passthroughActive = false;
+let noiseGateThreshold = 0.01;
 let threshold=.035;
 let isTalking = false;
 let isBlinking = false;
 let blinkTimeout = null;
 let blinkMultiplier = 1.0;
 let currentActiveAction = 'none';
-let gridVisible = false;
 
 let stageBgColorVal = '#000000';
 let masterScaleVal = 1.0; let masterPosXVal = 0; let masterPosYVal = 0;
@@ -670,20 +817,24 @@ const floatingNav=document.getElementById('floatingNav');
 const floatingMenuToggleBtn=document.getElementById('floatingMenuToggleBtn');
 const floatingToggle=document.getElementById('floatingToggle');
 const floatingMasterZoomToggle=document.getElementById('floatingMasterZoomToggle');
-const floatingGridToggle=document.getElementById('floatingGridToggle');
 const floatingTtsToggleBtn=document.getElementById('floatingTtsToggleBtn');
 const avatarMasterFlyout=document.getElementById('avatarMasterFlyout');
 const avatarTtsFlyout=document.getElementById('avatarTtsFlyout');
 
+const passthroughToggleBtn = document.getElementById('passthroughToggleBtn');
+const flyoutPassthroughToggleBtn = document.getElementById('flyoutPassthroughToggleBtn');
+const noiseGateRange = document.getElementById('noiseGateRange');
+const flyoutNoiseGate = document.getElementById('flyoutNoiseGate');
+
 const setupBgColorPicker = document.getElementById('setupBgColorPicker');
 const flyoutBgColorPicker = document.getElementById('flyoutBgColorPicker');
 const setupResetMasterBtn = document.getElementById('setupResetMasterBtn');
-const setupGridToggleBtn = document.getElementById('setupGridToggleBtn');
-const flyoutGridToggleBtn = document.getElementById('flyoutGridToggleBtn');
 const flyoutResetMasterBtn = document.getElementById('flyoutResetMasterBtn');
 
 const micSelect = document.getElementById('micSelect');
 const flyoutMicSelect = document.getElementById('flyoutMicSelect');
+const micVolume = document.getElementById('micVolume');
+const flyoutMicVolume = document.getElementById('flyoutMicVolume');
 const ttsVoiceSelect = document.getElementById('ttsVoiceSelect');
 const flyoutTtsVoiceSelect = document.getElementById('flyoutTtsVoiceSelect');
 
@@ -864,22 +1015,6 @@ async function loadAllImagesFromDB() {
   } catch (err) { console.error(err); }
 }
 
-function toggleGrid() {
-  gridVisible = !gridVisible;
-  if (gridVisible) {
-    stageContainer.classList.add('show-grid');
-    setupGridToggleBtn.textContent = '📏 Grid: ON'; setupGridToggleBtn.classList.add('active-btn');
-    flyoutGridToggleBtn.textContent = '📏 Grid: ON'; flyoutGridToggleBtn.classList.add('active-btn');
-  } else {
-    stageContainer.classList.remove('show-grid');
-    setupGridToggleBtn.textContent = '📏 Grid: OFF'; setupGridToggleBtn.classList.remove('active-btn');
-    flyoutGridToggleBtn.textContent = '📏 Grid: OFF'; flyoutGridToggleBtn.classList.remove('active-btn');
-  }
-}
-setupGridToggleBtn.onclick = toggleGrid;
-flyoutGridToggleBtn.onclick = toggleGrid;
-floatingGridToggle.onclick = toggleGrid;
-
 function updateStageScaleFit() {
   const wrapperWidth = stageWrapper.clientWidth;
   const wrapperHeight = stageWrapper.clientHeight;
@@ -899,7 +1034,26 @@ flyoutTiktokUsername.oninput = (e) => { tiktokUsernameInput.value = e.target.val
 ttsVoiceSelect.onchange = (e) => { flyoutTtsVoiceSelect.value = e.target.value; };
 flyoutTtsVoiceSelect.onchange = (e) => { ttsVoiceSelect.value = e.target.value; };
 
-// Sync Volume Sliders
+// Sync Mic Volume Sliders
+micVolume.oninput = (e) => {
+  micVolumeLevel = Number(e.target.value) / 100;
+  flyoutMicVolume.value = e.target.value;
+};
+flyoutMicVolume.oninput = (e) => {
+  micVolumeLevel = Number(e.target.value) / 100;
+  micVolume.value = e.target.value;
+};
+
+// Sync Noise Suppression Gate Sliders
+function handleNoiseGateChange(val) {
+  noiseGateRange.value = val;
+  flyoutNoiseGate.value = val;
+  noiseGateThreshold = (Number(val) / 100) * 0.08;
+}
+noiseGateRange.oninput = (e) => handleNoiseGateChange(e.target.value);
+flyoutNoiseGate.oninput = (e) => handleNoiseGateChange(e.target.value);
+
+// Sync TTS Volume Sliders
 ttsVolume.oninput = (e) => {
   ttsVolumeLevel = Number(e.target.value) / 100;
   flyoutTtsVolume.value = e.target.value;
@@ -1191,6 +1345,7 @@ function loadVoices() {
   synthVoices = window.speechSynthesis.getVoices();
   
   const populateSelect = (sel) => {
+    const curVal = sel.value;
     sel.innerHTML = '<option value="">Default System Voice</option>';
     synthVoices.forEach((voice, index) => {
       const option = document.createElement('option');
@@ -1198,6 +1353,7 @@ function loadVoices() {
       option.textContent = `${voice.name} (${voice.lang})`;
       sel.appendChild(option);
     });
+    if (curVal !== undefined && curVal !== "") sel.value = curVal;
   };
 
   populateSelect(ttsVoiceSelect);
@@ -1209,13 +1365,14 @@ if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-function speakComment(text) {
-  if (!ttsActive && !event) return; // allows test button without ttsActive toggle
+function speakComment(text, forceSpeak = false) {
+  if (!ttsActive && !forceSpeak) return;
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
+
   const utterance = new SpeechSynthesisUtterance(text);
   
-  const selectedVoiceIndex = ttsVoiceSelect.value;
+  const selectedVoiceIndex = ttsVoiceSelect.value !== "" ? ttsVoiceSelect.value : flyoutTtsVoiceSelect.value;
   if (selectedVoiceIndex !== "" && synthVoices[selectedVoiceIndex]) {
     utterance.voice = synthVoices[selectedVoiceIndex];
   }
@@ -1223,12 +1380,26 @@ function speakComment(text) {
   utterance.rate = ttsRate; 
   utterance.volume = ttsVolumeLevel; 
   utterance.pitch = 1.0;
+
+  utterance.onstart = () => {
+    isTalking = true;
+    updateAvatarDisplay();
+  };
+  utterance.onend = () => {
+    isTalking = false;
+    updateAvatarDisplay();
+  };
+  utterance.onerror = () => {
+    isTalking = false;
+    updateAvatarDisplay();
+  };
+
   window.speechSynthesis.speak(utterance);
 }
 
 ttsSpeed.oninput = e => { ttsRate = Number(e.target.value) / 100; };
-testTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!");
-flyoutTestTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!");
+testTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!", true);
+flyoutTestTtsBtn.onclick = () => speakComment("Hello everyone, welcome to the stream!", true);
 
 function toggleTts() {
   const username = tiktokUsernameInput.value.trim().replace(/^@/, '');
@@ -1333,6 +1504,41 @@ flyoutMicSelect.onchange = (e) => {
   if (running) { stopMic(); startMic(); }
 };
 
+function updatePassthroughNodes() {
+  if (!audioContext || !microphoneNode || !micGainNode) return;
+  try {
+    if (passthroughActive) {
+      microphoneNode.connect(highpassNode);
+      highpassNode.connect(lowpassNode);
+      lowpassNode.connect(micGainNode);
+      micGainNode.connect(audioContext.destination);
+    } else {
+      micGainNode.disconnect();
+    }
+  } catch(e) {
+    console.warn('Audio routing error:', e);
+  }
+}
+
+function togglePassthrough() {
+  passthroughActive = !passthroughActive;
+  if (passthroughActive) {
+    passthroughToggleBtn.textContent = '🔊 AUDIO PASSTHROUGH: ON';
+    passthroughToggleBtn.classList.add('active-btn');
+    flyoutPassthroughToggleBtn.textContent = '🔊 PASSTHROUGH: ON';
+    flyoutPassthroughToggleBtn.classList.add('active-btn');
+  } else {
+    passthroughToggleBtn.textContent = '🔊 AUDIO PASSTHROUGH: OFF';
+    passthroughToggleBtn.classList.remove('active-btn');
+    flyoutPassthroughToggleBtn.textContent = '🔊 PASSTHROUGH: OFF';
+    flyoutPassthroughToggleBtn.classList.remove('active-btn');
+  }
+  updatePassthroughNodes();
+}
+
+passthroughToggleBtn.onclick = togglePassthrough;
+flyoutPassthroughToggleBtn.onclick = togglePassthrough;
+
 async function startMic() {
   if (!images.slot1 && !images.slot2 && !images.slot3 && !images.slot4) {
     alert('Please load at least one avatar image frame first.');
@@ -1343,9 +1549,9 @@ async function startMic() {
     const constraints = {
       audio: {
         deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
         channelCount: 1
       },
       video: false
@@ -1353,27 +1559,42 @@ async function startMic() {
 
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     
-    const dummyAudio = new Audio();
-    dummyAudio.srcObject = stream;
-    dummyAudio.volume = 0;
-    try { await dummyAudio.play(); } catch(e) {}
-
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === 'suspended') {
       await audioContext.resume();
     }
     
+    // Create source from the user's mic stream
     const source = audioContext.createMediaStreamSource(stream);
+    
+    // Create analyser for mouth animation tracking
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
     source.connect(analyser);
+
+    // Audio filters: High-pass (cuts air/fan rumble < 80Hz) & Low-pass (cuts hiss > 12kHz)
+    highpassNode = audioContext.createBiquadFilter();
+    highpassNode.type = 'highpass';
+    highpassNode.frequency.value = 80;
+
+    lowpassNode = audioContext.createBiquadFilter();
+    lowpassNode.type = 'lowpass';
+    lowpassNode.frequency.value = 12000;
+    
+    // Create GainNode for dynamic noise gate & passthrough volume control
+    micGainNode = audioContext.createGain();
+    micGainNode.gain.value = 0;
+
+    microphoneNode = source;
+    updatePassthroughNodes();
+
     data = new Float32Array(analyser.fftSize);
 
     running = true;
-    start.textContent = 'STOP MICROPHONE';
-    flyoutMicToggleBtn.textContent = '🎤 MIC: ON';
+    start.textContent = 'STOP MICROPHONE INPUT (MOUTH TRACKING)';
+    flyoutMicToggleBtn.textContent = '🎤 MIC INPUT: ON';
     flyoutMicToggleBtn.classList.add('active-btn');
-    status.textContent = 'LISTENING';
+    status.textContent = 'LISTENING FOR MOUTH MOVEMENT';
     scheduleBlink();
     loop();
   } catch (err) { alert('Microphone permission denied or unavailable: ' + err.message); }
@@ -1389,6 +1610,12 @@ function loop() {
 
   isTalking = rms > threshold;
   updateAvatarDisplay();
+
+  // Dynamic Noise Gate for audio passthrough
+  if (passthroughActive && micGainNode && audioContext) {
+    const targetGain = rms > noiseGateThreshold ? micVolumeLevel : 0;
+    micGainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.04);
+  }
   
   status.textContent = isTalking ? 'TALKING' : 'LISTENING';
   status.style.color = isTalking ? '#63df83' : '#ccc';
@@ -1398,14 +1625,23 @@ function loop() {
 function stopMic() {
   running = false;
   if (blinkTimeout) clearTimeout(blinkTimeout);
+  if (micGainNode) {
+    try { micGainNode.disconnect(); } catch(e){}
+    micGainNode = null;
+  }
+  if (highpassNode) { try { highpassNode.disconnect(); } catch(e){} highpassNode = null; }
+  if (lowpassNode) { try { lowpassNode.disconnect(); } catch(e){} lowpassNode = null; }
+  if (microphoneNode && audioContext) {
+    try { microphoneNode.disconnect(); } catch(e){}
+  }
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (audioContext) audioContext.close();
-  stream = null; audioContext = null; analyser = null; isBlinking = false; isTalking = false;
+  stream = null; audioContext = null; analyser = null; microphoneNode = null; isBlinking = false; isTalking = false;
   bar.style.width = '0%';
   status.textContent = 'Stopped';
   status.style.color = '#ccc';
-  start.textContent = 'START MICROPHONE';
-  flyoutMicToggleBtn.textContent = '🎤 MIC: OFF';
+  start.textContent = 'START MICROPHONE INPUT (MOUTH TRACKING)';
+  flyoutMicToggleBtn.textContent = '🎤 MIC INPUT: OFF';
   flyoutMicToggleBtn.classList.remove('active-btn');
   updateAvatarDisplay();
 }
